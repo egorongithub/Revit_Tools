@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Sminex BIM Tools</Name>
+    <Assembly>SminexBimTools\SminexBimTools.dll</Assembly>
+    <AddInId>A8AC6C66-A4DD-4255-834A-8DF5D675D339</AddInId>
+    <FullClassName>SminexBimTools.App</FullClassName>
+    <VendorId>SMNX</VendorId>
+    <VendorDescription>Sminex, https://sminex.com</VendorDescription>
+  </AddIn>
+</RevitAddIns>

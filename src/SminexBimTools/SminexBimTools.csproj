@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Library</OutputType>
+    <LangVersion>latest</LangVersion>
+    <PlatformTarget>x64</PlatformTarget>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>SminexBimTools</RootNamespace>
+    <AssemblyName>SminexBimTools</AssemblyName>
+    <Version>1.0.0</Version>
+    <Company>Sminex</Company>
+    <Product>Sminex BIM Tools</Product>
+    <Description>Инструменты Sminex для Autodesk Revit 2022/2024</Description>
+    <Copyright>© Sminex</Copyright>
+    <Configurations>Debug R2022;Release R2022;Debug R2024;Release R2024</Configurations>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+  </PropertyGroup>
+
+  <!-- Версия Revit определяется конфигурацией сборки -->
+  <PropertyGroup Condition="$(Configuration.Contains('R2022'))">
+    <RevitVersion>2022</RevitVersion>
+    <DefineConstants>$(DefineConstants);REVIT2022</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(Configuration.Contains('R2024'))">
+    <RevitVersion>2024</RevitVersion>
+    <DefineConstants>$(DefineConstants);REVIT2024</DefineConstants>
+  </PropertyGroup>
+
+  <!-- Значение по умолчанию для обычных Debug/Release -->
+  <PropertyGroup Condition="'$(RevitVersion)' == ''">
+    <RevitVersion>2024</RevitVersion>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(Configuration.Contains('Debug'))">
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineConstants>$(DefineConstants);DEBUG</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(Configuration.Contains('Release'))">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <!-- Ссылки на Revit API из NuGet — локальная установка Revit для сборки не нужна.
+       Сборки помечены как reference-only и не копируются в выходную папку. -->
+  <ItemGroup>
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPI" Version="$(RevitVersion).*" />
+    <PackageReference Include="Nice3point.Revit.Api.RevitAPIUI" Version="$(RevitVersion).*" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Icons\*.png" />
+  </ItemGroup>
+
+</Project>

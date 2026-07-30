@@ -1,0 +1,68 @@
+<Window x:Class="SminexBimTools.UI.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sminex BIM Tools — настройки"
+        Width="580"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        FontSize="13">
+    <StackPanel Margin="18">
+        <TextBlock TextWrapping="Wrap"
+                   Foreground="#FF606060"
+                   Margin="0,0,0,14"
+                   Text="Укажите, какие параметры искать у выделенных элементов для каждой проверки. Имена перечисляются через запятую и проверяются по порядку — используется первый найденный параметр со значением. Если ни один параметр не найден, используется системный параметр Revit."/>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="130"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Объем:" VerticalAlignment="Center"/>
+            <TextBox x:Name="VolumeBox" Grid.Row="0" Grid.Column="1" Margin="0,4" Padding="4,3"/>
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="Площадь:" VerticalAlignment="Center"/>
+            <TextBox x:Name="AreaBox" Grid.Row="1" Grid.Column="1" Margin="0,4" Padding="4,3"/>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="Длина:" VerticalAlignment="Center"/>
+            <TextBox x:Name="LengthBox" Grid.Row="2" Grid.Column="1" Margin="0,4" Padding="4,3"/>
+
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Количество:" VerticalAlignment="Center"/>
+            <TextBox x:Name="CountBox" Grid.Row="3" Grid.Column="1" Margin="0,4" Padding="4,3"/>
+        </Grid>
+
+        <CheckBox x:Name="TypeParamsCheck"
+                  Content="Искать параметры также в типе элемента"
+                  Margin="0,14,0,0"/>
+
+        <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+            <TextBlock Text="Знаков после запятой:" VerticalAlignment="Center"/>
+            <ComboBox x:Name="DecimalsCombo" Width="64" Margin="10,0,0,0"/>
+        </StackPanel>
+
+        <Grid Margin="0,22,0,0">
+            <Button Content="По умолчанию"
+                    HorizontalAlignment="Left"
+                    Padding="14,5"
+                    Click="Defaults_Click"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Сохранить"
+                        Padding="18,5"
+                        Margin="0,0,10,0"
+                        IsDefault="True"
+                        Click="Save_Click"/>
+                <Button Content="Отмена"
+                        Padding="18,5"
+                        IsCancel="True"/>
+            </StackPanel>
+        </Grid>
+    </StackPanel>
+</Window>

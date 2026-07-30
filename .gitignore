@@ -1,0 +1,15 @@
+# Сборка
+bin/
+obj/
+*.dll
+*.pdb
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# NuGet
+packages/
+*.nupkg

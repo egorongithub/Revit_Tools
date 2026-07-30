@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        revit: ['2022', '2024']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Restore
+        run: dotnet restore SminexBimTools.sln
+
+      - name: Build
+        run: msbuild SminexBimTools.sln /restore:false /p:Configuration="Release R${{ matrix.revit }}" /p:Platform="Any CPU" /v:minimal
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SminexBimTools-Revit${{ matrix.revit }}
+          path: |
+            src/SminexBimTools/bin/Release R${{ matrix.revit }}/SminexBimTools.dll
+            addin/SminexBimTools.addin
