@@ -109,9 +109,15 @@ namespace SminexBimTools.Core
                 if (string.IsNullOrEmpty(name))
                     continue;
 
-                Parameter parameter = element.LookupParameter(name);
-                if (parameter != null && parameter.HasValue)
-                    return parameter;
+                // У элемента может быть несколько параметров с одинаковым именем
+                // (например, общий параметр и параметр семейства) — LookupParameter
+                // вернул бы первый попавшийся, даже пустой. Перебираем все
+                // одноименные и берем первый со значением.
+                foreach (Parameter parameter in element.GetParameters(name))
+                {
+                    if (parameter != null && parameter.HasValue)
+                        return parameter;
+                }
             }
 
             return null;
