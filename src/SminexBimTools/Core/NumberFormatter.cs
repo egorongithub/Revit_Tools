@@ -17,7 +17,15 @@ namespace SminexBimTools.Core
             CultureInfo culture = CultureInfo.CurrentCulture;
 
             MidpointRounding mode = roundUp ? MidpointRounding.AwayFromZero : MidpointRounding.ToEven;
-            string text = Math.Round(value, decimalPlaces, mode).ToString("N" + decimalPlaces, culture);
+
+            // После перевода из внутренних единиц Revit значение 0,8325 может
+            // храниться как 0,83249999999999… — тогда правило половинки не
+            // срабатывает и число уходит вниз. Предварительное округление до
+            // 9 знаков убирает этот двоичный шум (так же поступает и Revit),
+            // не влияя на отображаемые 0–6 знаков.
+            double cleaned = Math.Round(value, 9, MidpointRounding.AwayFromZero);
+
+            string text = Math.Round(cleaned, decimalPlaces, mode).ToString("N" + decimalPlaces, culture);
 
             if (decimalPlaces > 0)
             {
