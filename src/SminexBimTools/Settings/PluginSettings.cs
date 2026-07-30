@@ -29,6 +29,12 @@ namespace SminexBimTools.Settings
         /// <summary>Число знаков после запятой в результатах.</summary>
         public int DecimalPlaces { get; set; } = 3;
 
+        /// <summary>
+        /// Округлять последнюю цифру вверх, как это делает Revit (0,8325 → 0,833).
+        /// Если выключено, используется «банковское» округление к чётному (0,8325 → 0,832).
+        /// </summary>
+        public bool RoundUp { get; set; } = true;
+
         public static PluginSettings CreateDefault()
         {
             return new PluginSettings
@@ -38,7 +44,8 @@ namespace SminexBimTools.Settings
                 LengthParameters = new List<string> { "Длина", "Length", "ADSK_Длина" },
                 CountParameters = new List<string> { "Количество", "Count", "ADSK_Количество" },
                 SearchTypeParameters = true,
-                DecimalPlaces = 3
+                DecimalPlaces = 3,
+                RoundUp = true
             };
         }
 

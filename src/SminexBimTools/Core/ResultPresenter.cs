@@ -17,7 +17,7 @@ namespace SminexBimTools.Core
         {
             string unit = kind.Unit();
             int decimals = kind == MeasureKind.Count ? 0 : settings.DecimalPlaces;
-            string totalText = NumberFormatter.Format(result.Total, ResolveDecimals(result.Total, decimals));
+            string totalText = NumberFormatter.Format(result.Total, ResolveDecimals(result.Total, decimals), settings.RoundUp);
 
             var dialog = new TaskDialog("Sminex BIM Tools")
             {
@@ -33,7 +33,7 @@ namespace SminexBimTools.Core
             if (result.Skipped.Count > 0)
                 content.AppendLine(string.Format("Пропущено (параметр не найден): {0}.", result.Skipped.Count));
             if (kind == MeasureKind.Length && result.Total > 0)
-                content.AppendLine(string.Format("То же в миллиметрах: {0} мм.", NumberFormatter.Format(result.Total * 1000, 0)));
+                content.AppendLine(string.Format("То же в миллиметрах: {0} мм.", NumberFormatter.Format(result.Total * 1000, 0, settings.RoundUp)));
             dialog.MainContent = content.ToString().TrimEnd();
 
             dialog.ExpandedContent = BuildExpandedContent(result, unit, settings);
@@ -52,7 +52,7 @@ namespace SminexBimTools.Core
                 {
                     expanded.AppendLine(string.Format("    • {0}: {1} {2} ({3} шт)",
                         pair.Key,
-                        NumberFormatter.Format(pair.Value.Sum, settings.DecimalPlaces),
+                        NumberFormatter.Format(pair.Value.Sum, settings.DecimalPlaces, settings.RoundUp),
                         unit,
                         pair.Value.Count));
                 }

@@ -8,13 +8,16 @@ namespace SminexBimTools.Core
         /// <summary>
         /// Форматирует число с разделителями групп и заданным числом знаков
         /// после запятой, убирая незначащие нули в конце.
+        /// При <paramref name="roundUp"/> последняя цифра округляется вверх,
+        /// как в Revit (0,8325 → 0,833); иначе — к чётному (0,8325 → 0,832).
         /// </summary>
-        public static string Format(double value, int decimalPlaces)
+        public static string Format(double value, int decimalPlaces, bool roundUp = true)
         {
             decimalPlaces = Math.Max(0, Math.Min(6, decimalPlaces));
             CultureInfo culture = CultureInfo.CurrentCulture;
 
-            string text = Math.Round(value, decimalPlaces).ToString("N" + decimalPlaces, culture);
+            MidpointRounding mode = roundUp ? MidpointRounding.AwayFromZero : MidpointRounding.ToEven;
+            string text = Math.Round(value, decimalPlaces, mode).ToString("N" + decimalPlaces, culture);
 
             if (decimalPlaces > 0)
             {

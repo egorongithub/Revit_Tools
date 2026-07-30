@@ -43,6 +43,10 @@
                   Content="Искать параметры также в типе элемента"
                   Margin="0,14,0,0"/>
 
+        <CheckBox x:Name="RoundUpCheck"
+                  Content="Округлять последнюю цифру вверх, как в Revit (0,8325 → 0,833)"
+                  Margin="0,10,0,0"/>
+
         <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
             <TextBlock Text="Знаков после запятой:" VerticalAlignment="Center"/>
             <ComboBox x:Name="DecimalsCombo" Width="64" Margin="10,0,0,0"/>

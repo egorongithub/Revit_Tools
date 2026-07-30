@@ -31,6 +31,7 @@ namespace SminexBimTools.UI
             LengthBox.Text = Join(settings.LengthParameters);
             CountBox.Text = Join(settings.CountParameters);
             TypeParamsCheck.IsChecked = settings.SearchTypeParameters;
+            RoundUpCheck.IsChecked = settings.RoundUp;
             DecimalsCombo.SelectedIndex = Math.Max(0, Math.Min(6, settings.DecimalPlaces));
         }
 
@@ -43,6 +44,7 @@ namespace SminexBimTools.UI
                 LengthParameters = Parse(LengthBox.Text),
                 CountParameters = Parse(CountBox.Text),
                 SearchTypeParameters = TypeParamsCheck.IsChecked == true,
+                RoundUp = RoundUpCheck.IsChecked == true,
                 DecimalPlaces = DecimalsCombo.SelectedIndex < 0 ? 3 : DecimalsCombo.SelectedIndex
             };
 
