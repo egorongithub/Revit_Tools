@@ -23,9 +23,6 @@ namespace SminexBimTools.Settings
         /// <summary>Правила для проверки «Длина».</summary>
         public List<ParameterRule> LengthRules { get; set; } = new List<ParameterRule>();
 
-        /// <summary>Правила для проверки «Количество».</summary>
-        public List<ParameterRule> CountRules { get; set; } = new List<ParameterRule>();
-
         /// <summary>
         /// Общий порядок поиска для правил с источником «Авто» и системного шага.
         /// По умолчанию: тип → экземпляр → системные.
@@ -63,17 +60,13 @@ namespace SminexBimTools.Settings
         [XmlArray("LengthParameters"), XmlArrayItem("string")]
         public List<string> LegacyLengthParameters { get; set; }
 
-        [XmlArray("CountParameters"), XmlArrayItem("string")]
-        public List<string> LegacyCountParameters { get; set; }
-
         public static PluginSettings CreateDefault()
         {
             return new PluginSettings
             {
                 VolumeRules = MakeRules("Объем", "Volume", "ADSK_Объем"),
                 AreaRules = MakeRules("Площадь", "Area", "ADSK_Площадь"),
-                LengthRules = MakeRules("Длина", "Length", "ADSK_Длина"),
-                CountRules = MakeRules("Количество", "Count", "ADSK_Количество")
+                LengthRules = MakeRules("Длина", "Length", "ADSK_Длина")
             };
         }
 
@@ -84,7 +77,6 @@ namespace SminexBimTools.Settings
                 case MeasureKind.Volume: return VolumeRules ?? new List<ParameterRule>();
                 case MeasureKind.Area: return AreaRules ?? new List<ParameterRule>();
                 case MeasureKind.Length: return LengthRules ?? new List<ParameterRule>();
-                case MeasureKind.Count: return CountRules ?? new List<ParameterRule>();
                 default: return new List<ParameterRule>();
             }
         }
@@ -95,12 +87,10 @@ namespace SminexBimTools.Settings
             VolumeRules = MigrateOne(VolumeRules, LegacyVolumeParameters);
             AreaRules = MigrateOne(AreaRules, LegacyAreaParameters);
             LengthRules = MigrateOne(LengthRules, LegacyLengthParameters);
-            CountRules = MigrateOne(CountRules, LegacyCountParameters);
 
             LegacyVolumeParameters = null;
             LegacyAreaParameters = null;
             LegacyLengthParameters = null;
-            LegacyCountParameters = null;
         }
 
         private static List<ParameterRule> MigrateOne(List<ParameterRule> rules, List<string> legacyNames)

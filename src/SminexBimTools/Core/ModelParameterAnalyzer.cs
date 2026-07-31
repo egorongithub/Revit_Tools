@@ -97,8 +97,6 @@ namespace SminexBimTools.Core
 
             if (expected != null && dataType == expected)
                 return "✓ найден: " + GetDataTypeLabel(dataType);
-            if (kind == MeasureKind.Count && isNumberLike)
-                return "✓ найден: " + GetDataTypeLabel(dataType);
             if (isNumberLike)
                 return "• найден, без размерности — значение будет взято как есть";
             if (isText)

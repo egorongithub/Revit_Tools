@@ -59,7 +59,6 @@ namespace SminexBimTools.Settings
             settings.VolumeRules = settings.VolumeRules ?? new List<ParameterRule>();
             settings.AreaRules = settings.AreaRules ?? new List<ParameterRule>();
             settings.LengthRules = settings.LengthRules ?? new List<ParameterRule>();
-            settings.CountRules = settings.CountRules ?? new List<ParameterRule>();
             settings.DecimalPlaces = Math.Max(0, Math.Min(6, settings.DecimalPlaces));
 
             // Порядок поиска должен содержать каждый из трех шагов ровно один раз.

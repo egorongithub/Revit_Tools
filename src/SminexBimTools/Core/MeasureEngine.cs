@@ -25,6 +25,11 @@ namespace SminexBimTools.Core
         /// </summary>
         public static SummationResult Sum(Document document, ICollection<ElementId> elementIds, MeasureKind kind, PluginSettings settings)
         {
+            // «Количество» — простой счетчик выделенных элементов,
+            // параметры для него не ищутся.
+            if (kind == MeasureKind.Count)
+                return CountElements(document, elementIds);
+
             var result = new SummationResult { TotalElements = elementIds.Count };
             IList<ParameterRule> rules = settings.GetRules(kind);
 
@@ -41,25 +46,15 @@ namespace SminexBimTools.Core
                 if (hit != null)
                     value = ExtractValue(hit.Parameter, out unitLabel);
 
-                string groupKey = null;
-                if (value != null)
-                {
-                    groupKey = BuildParameterKey(hit, kind, unitLabel);
-                    if (unitLabel == null && kind != MeasureKind.Count)
-                        result.RawCount++;
-                }
-                else if (kind == MeasureKind.Count)
-                {
-                    // Для «Количества» элемент без параметра считается за 1 штуку.
-                    value = 1;
-                    groupKey = "по числу элементов (1 шт за элемент)";
-                }
-
                 if (value == null)
                 {
                     result.Skipped.Add(Describe(element));
                     continue;
                 }
+
+                string groupKey = BuildParameterKey(hit, unitLabel);
+                if (unitLabel == null)
+                    result.RawCount++;
 
                 result.Counted++;
                 result.Total += value.Value;
@@ -84,12 +79,29 @@ namespace SminexBimTools.Core
             total.Count++;
         }
 
-        private static string BuildParameterKey(ParameterHit hit, MeasureKind kind, string unitLabel)
+        private static SummationResult CountElements(Document document, ICollection<ElementId> elementIds)
+        {
+            var result = new SummationResult { TotalElements = elementIds.Count };
+
+            foreach (ElementId id in elementIds)
+            {
+                Element element = document.GetElement(id);
+                if (element == null)
+                    continue;
+
+                result.Counted++;
+                result.Total += 1;
+
+                string categoryName = element.Category != null ? element.Category.Name : "Без категории";
+                Accumulate(result.Categories, categoryName, 1);
+            }
+
+            return result;
+        }
+
+        private static string BuildParameterKey(ParameterHit hit, string unitLabel)
         {
             string name = hit.Parameter.Definition.Name;
-
-            if (kind == MeasureKind.Count)
-                return string.Format("{0} ({1})", name, hit.SourceLabel);
 
             return unitLabel != null
                 ? string.Format("{0} ({1}, {2})", name, hit.SourceLabel, unitLabel)

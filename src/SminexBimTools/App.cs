@@ -55,8 +55,7 @@ namespace SminexBimTools
             AddButton(sumPanel, assemblyPath,
                 "SBT_Count", "Количество", typeof(CountCommand), "Count",
                 "Количество выделенных элементов",
-                "Суммирует значения параметра «Количество» по выделенным элементам; " +
-                "элементы без такого параметра считаются за 1 штуку.",
+                "Показывает число выделенных элементов с разбивкой по категориям.",
                 typeof(DocumentRequiredAvailability));
 
             AddButton(sumPanel, assemblyPath,

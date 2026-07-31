@@ -4,8 +4,8 @@ using SminexBimTools.Core;
 namespace SminexBimTools.Commands
 {
     /// <summary>
-    /// Кнопка «Количество» — сумма значений параметра «Количество» выделенных
-    /// элементов; элементы без такого параметра считаются за 1 штуку.
+    /// Кнопка «Количество» — число выделенных элементов
+    /// с разбивкой по категориям.
     /// </summary>
     [Transaction(TransactionMode.Manual)]
     [Regeneration(RegenerationOption.Manual)]

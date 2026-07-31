@@ -66,15 +66,6 @@
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>
-            <TabItem Header="Количество">
-                <DataGrid x:Name="CountGrid">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
-                        <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                        <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="300"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </TabItem>
         </TabControl>
 
         <TextBlock TextWrapping="Wrap"

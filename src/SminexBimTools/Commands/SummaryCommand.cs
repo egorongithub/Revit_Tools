@@ -52,10 +52,18 @@ namespace SminexBimTools.Commands
                     int decimals = kind == MeasureKind.Count ? 0 : settings.DecimalPlaces;
                     string totalText = NumberFormatter.Format(result.Total, decimals, settings.RoundUp);
 
-                    string line = string.Format("{0}: {1} {2} — учтено {3} из {4}",
-                        kind.DisplayName(), totalText, kind.Unit(), result.Counted, result.TotalElements);
-                    if (kind == MeasureKind.Length && result.Total > 0)
-                        line += string.Format(" ({0} мм)", NumberFormatter.Format(result.Total * 1000, 0, settings.RoundUp));
+                    string line;
+                    if (kind == MeasureKind.Count)
+                    {
+                        line = string.Format("{0}: {1} {2}", kind.DisplayName(), totalText, kind.Unit());
+                    }
+                    else
+                    {
+                        line = string.Format("{0}: {1} {2} — учтено {3} из {4}",
+                            kind.DisplayName(), totalText, kind.Unit(), result.Counted, result.TotalElements);
+                        if (kind == MeasureKind.Length && result.Total > 0)
+                            line += string.Format(" ({0} мм)", NumberFormatter.Format(result.Total * 1000, 0, settings.RoundUp));
+                    }
                     content.AppendLine(line);
 
                     var notes = new List<string>();

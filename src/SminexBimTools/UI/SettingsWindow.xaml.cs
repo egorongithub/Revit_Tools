@@ -31,7 +31,6 @@ namespace SminexBimTools.UI
         private readonly ObservableCollection<RuleVm> _volumeRules = new ObservableCollection<RuleVm>();
         private readonly ObservableCollection<RuleVm> _areaRules = new ObservableCollection<RuleVm>();
         private readonly ObservableCollection<RuleVm> _lengthRules = new ObservableCollection<RuleVm>();
-        private readonly ObservableCollection<RuleVm> _countRules = new ObservableCollection<RuleVm>();
 
         public PluginSettings Settings { get; private set; }
 
@@ -48,7 +47,6 @@ namespace SminexBimTools.UI
             VolumeGrid.ItemsSource = _volumeRules;
             AreaGrid.ItemsSource = _areaRules;
             LengthGrid.ItemsSource = _lengthRules;
-            CountGrid.ItemsSource = _countRules;
 
             foreach (DataGrid grid in AllGrids())
                 ((DataGridComboBoxColumn)grid.Columns[1]).ItemsSource = SourceLabels;
@@ -70,7 +68,6 @@ namespace SminexBimTools.UI
             FillRules(_volumeRules, settings.VolumeRules);
             FillRules(_areaRules, settings.AreaRules);
             FillRules(_lengthRules, settings.LengthRules);
-            FillRules(_countRules, settings.CountRules);
 
             OrderList.Items.Clear();
             foreach (SearchStage stage in settings.SearchOrder)
@@ -107,7 +104,6 @@ namespace SminexBimTools.UI
                 VolumeRules = CollectRules(_volumeRules),
                 AreaRules = CollectRules(_areaRules),
                 LengthRules = CollectRules(_lengthRules),
-                CountRules = CollectRules(_countRules),
                 SearchOrder = CollectOrder(),
                 RoundUp = RoundUpCheck.IsChecked == true,
                 GroupByCategory = GroupCategoryCheck.IsChecked == true,
@@ -172,8 +168,7 @@ namespace SminexBimTools.UI
             {
                 case 0: return VolumeGrid;
                 case 1: return AreaGrid;
-                case 2: return LengthGrid;
-                default: return CountGrid;
+                default: return LengthGrid;
             }
         }
 
@@ -183,8 +178,7 @@ namespace SminexBimTools.UI
             {
                 case 0: return _volumeRules;
                 case 1: return _areaRules;
-                case 2: return _lengthRules;
-                default: return _countRules;
+                default: return _lengthRules;
             }
         }
 
@@ -194,8 +188,7 @@ namespace SminexBimTools.UI
             {
                 case 0: return MeasureKind.Volume;
                 case 1: return MeasureKind.Area;
-                case 2: return MeasureKind.Length;
-                default: return MeasureKind.Count;
+                default: return MeasureKind.Length;
             }
         }
 
@@ -204,7 +197,6 @@ namespace SminexBimTools.UI
             yield return VolumeGrid;
             yield return AreaGrid;
             yield return LengthGrid;
-            yield return CountGrid;
         }
 
         private void Add_Click(object sender, RoutedEventArgs e)
@@ -287,7 +279,6 @@ namespace SminexBimTools.UI
             EvaluateRules(_volumeRules, MeasureKind.Volume, map);
             EvaluateRules(_areaRules, MeasureKind.Area, map);
             EvaluateRules(_lengthRules, MeasureKind.Length, map);
-            EvaluateRules(_countRules, MeasureKind.Count, map);
         }
 
         private static void EvaluateRules(ObservableCollection<RuleVm> rules, MeasureKind kind, Dictionary<string, ProjectParameterInfo> map)
