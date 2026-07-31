@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Xml.Serialization;
 
 namespace SminexBimTools.Settings
@@ -52,11 +54,32 @@ namespace SminexBimTools.Settings
 
         private static PluginSettings Sanitize(PluginSettings settings)
         {
-            settings.VolumeParameters = settings.VolumeParameters ?? new System.Collections.Generic.List<string>();
-            settings.AreaParameters = settings.AreaParameters ?? new System.Collections.Generic.List<string>();
-            settings.LengthParameters = settings.LengthParameters ?? new System.Collections.Generic.List<string>();
-            settings.CountParameters = settings.CountParameters ?? new System.Collections.Generic.List<string>();
+            settings.MigrateLegacyLists();
+
+            settings.VolumeRules = settings.VolumeRules ?? new List<ParameterRule>();
+            settings.AreaRules = settings.AreaRules ?? new List<ParameterRule>();
+            settings.LengthRules = settings.LengthRules ?? new List<ParameterRule>();
+            settings.CountRules = settings.CountRules ?? new List<ParameterRule>();
             settings.DecimalPlaces = Math.Max(0, Math.Min(6, settings.DecimalPlaces));
+
+            // Порядок поиска должен содержать каждый из трех шагов ровно один раз.
+            List<SearchStage> order = settings.SearchOrder;
+            bool orderValid = order != null
+                && order.Count == 3
+                && order.Distinct().Count() == 3
+                && order.Contains(SearchStage.Type)
+                && order.Contains(SearchStage.Instance)
+                && order.Contains(SearchStage.System);
+            if (!orderValid)
+            {
+                settings.SearchOrder = new List<SearchStage>
+                {
+                    SearchStage.Type,
+                    SearchStage.Instance,
+                    SearchStage.System
+                };
+            }
+
             return settings;
         }
     }

@@ -16,14 +16,22 @@ namespace SminexBimTools.Core
         /// <summary>Сколько элементов учтено в сумме.</summary>
         public int Counted { get; set; }
 
+        /// <summary>
+        /// Сколько элементов дали значение из безразмерного параметра
+        /// (число/целое/текст) — оно просуммировано как есть, без перевода единиц.
+        /// </summary>
+        public int RawCount { get; set; }
+
         /// <summary>Описания элементов, у которых параметр не найден.</summary>
         public List<string> Skipped { get; } = new List<string>();
 
         /// <summary>Разбивка суммы по категориям: имя категории → итог.</summary>
         public Dictionary<string, CategoryTotal> Categories { get; } = new Dictionary<string, CategoryTotal>();
 
-        /// <summary>Какие параметры реально использованы: имя параметра → число элементов.</summary>
-        public Dictionary<string, int> UsedParameters { get; } = new Dictionary<string, int>();
+        /// <summary>
+        /// Разбивка по параметрам-источникам: «Имя (источник, единица)» → итог.
+        /// </summary>
+        public Dictionary<string, CategoryTotal> ByParameter { get; } = new Dictionary<string, CategoryTotal>();
     }
 
     public class CategoryTotal

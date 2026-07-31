@@ -59,6 +59,13 @@ namespace SminexBimTools
                 "элементы без такого параметра считаются за 1 штуку.",
                 typeof(DocumentRequiredAvailability));
 
+            AddButton(sumPanel, assemblyPath,
+                "SBT_Summary", "Сводка", typeof(SummaryCommand), "Summary",
+                "Объем, площадь, длина и количество одним окном",
+                "Считает сразу все суммы («Объем», «Площадь», «Длина», «Количество») " +
+                "по выделенным элементам и выводит их в одном окне.",
+                typeof(DocumentRequiredAvailability));
+
             AddButton(servicePanel, assemblyPath,
                 "SBT_Settings", "Настройки", typeof(SettingsCommand), "Settings",
                 "Настройки Sminex BIM Tools",

@@ -19,7 +19,10 @@ namespace SminexBimTools.Commands
             {
                 PluginSettings settings = SettingsManager.Load();
 
-                var window = new SettingsWindow(settings);
+                UIDocument uidoc = commandData.Application.ActiveUIDocument;
+                Document document = uidoc != null ? uidoc.Document : null;
+
+                var window = new SettingsWindow(settings, document);
                 var helper = new WindowInteropHelper(window)
                 {
                     Owner = commandData.Application.MainWindowHandle

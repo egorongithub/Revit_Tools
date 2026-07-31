@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using Autodesk.Revit.UI.Selection;
 using SminexBimTools.Core;
 using SminexBimTools.Settings;
 
@@ -29,23 +27,9 @@ namespace SminexBimTools.Commands
                     return Result.Failed;
                 }
 
-                Document doc = uidoc.Document;
-                ICollection<ElementId> ids = uidoc.Selection.GetElementIds();
-
-                if (ids == null || ids.Count == 0)
-                {
-                    try
-                    {
-                        IList<Reference> references = uidoc.Selection.PickObjects(
-                            ObjectType.Element,
-                            "Выберите элементы и нажмите «Готово»");
-                        ids = references.Select(r => r.ElementId).ToList();
-                    }
-                    catch (Autodesk.Revit.Exceptions.OperationCanceledException)
-                    {
-                        return Result.Cancelled;
-                    }
-                }
+                ICollection<ElementId> ids = SelectionHelper.GetTargets(uidoc);
+                if (ids == null)
+                    return Result.Cancelled;
 
                 if (ids.Count == 0)
                 {
@@ -54,7 +38,7 @@ namespace SminexBimTools.Commands
                 }
 
                 PluginSettings settings = SettingsManager.Load();
-                SummationResult result = MeasureEngine.Sum(doc, ids, Kind, settings);
+                SummationResult result = MeasureEngine.Sum(uidoc.Document, ids, Kind, settings);
                 ResultPresenter.Show(Kind, result, settings);
 
                 return Result.Succeeded;

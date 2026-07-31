@@ -34,6 +34,10 @@ namespace SminexBimTools.Core
                 content.AppendLine(string.Format("Пропущено (параметр не найден): {0}.", result.Skipped.Count));
             if (kind == MeasureKind.Length && result.Total > 0)
                 content.AppendLine(string.Format("То же в миллиметрах: {0} мм.", NumberFormatter.Format(result.Total * 1000, 0, settings.RoundUp)));
+            if (kind != MeasureKind.Count && result.RawCount > 0)
+                content.AppendLine(string.Format(
+                    "⚠ У {0} элем. значение взято из безразмерного параметра (число/текст) и просуммировано как есть — проверьте единицы.",
+                    result.RawCount));
             dialog.MainContent = content.ToString().TrimEnd();
 
             dialog.ExpandedContent = BuildExpandedContent(result, unit, settings);
@@ -45,7 +49,7 @@ namespace SminexBimTools.Core
         {
             var expanded = new StringBuilder();
 
-            if (result.Categories.Count > 0)
+            if (settings.GroupByCategory && result.Categories.Count > 0)
             {
                 expanded.AppendLine("По категориям:");
                 foreach (KeyValuePair<string, CategoryTotal> pair in result.Categories.OrderByDescending(p => p.Value.Sum))
@@ -58,11 +62,16 @@ namespace SminexBimTools.Core
                 }
             }
 
-            if (result.UsedParameters.Count > 0)
+            if (settings.GroupByParameter && result.ByParameter.Count > 0)
             {
-                expanded.AppendLine("Использованные параметры:");
-                foreach (KeyValuePair<string, int> pair in result.UsedParameters.OrderByDescending(p => p.Value))
-                    expanded.AppendLine(string.Format("    • {0} — {1} элем.", pair.Key, pair.Value));
+                expanded.AppendLine("По параметрам-источникам:");
+                foreach (KeyValuePair<string, CategoryTotal> pair in result.ByParameter.OrderByDescending(p => p.Value.Sum))
+                {
+                    expanded.AppendLine(string.Format("    • {0}: {1} ({2} шт)",
+                        pair.Key,
+                        NumberFormatter.Format(pair.Value.Sum, settings.DecimalPlaces, settings.RoundUp),
+                        pair.Value.Count));
+                }
             }
 
             if (result.Skipped.Count > 0)

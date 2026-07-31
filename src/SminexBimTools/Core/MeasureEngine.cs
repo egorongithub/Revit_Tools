@@ -10,15 +10,23 @@ namespace SminexBimTools.Core
     /// </summary>
     public static class MeasureEngine
     {
+        private class ParameterHit
+        {
+            public Parameter Parameter;
+            public string SourceLabel; // экземпляр / тип / системный
+        }
+
         /// <summary>
-        /// Суммирует значение измерения <paramref name="kind"/> по элементам <paramref name="elementIds"/>.
-        /// Имена параметров берутся из настроек и проверяются по порядку — используется
-        /// первый найденный параметр со значением.
+        /// Суммирует значение измерения <paramref name="kind"/> по элементам.
+        /// Источники обходятся в порядке settings.SearchOrder; правила с явным
+        /// источником («экземпляр»/«тип») проверяются только на своем шаге,
+        /// правила «Авто» — на каждом. Используется первый найденный параметр
+        /// со значением.
         /// </summary>
         public static SummationResult Sum(Document document, ICollection<ElementId> elementIds, MeasureKind kind, PluginSettings settings)
         {
             var result = new SummationResult { TotalElements = elementIds.Count };
-            IList<string> parameterNames = settings.GetParameters(kind);
+            IList<ParameterRule> rules = settings.GetRules(kind);
 
             foreach (ElementId id in elementIds)
             {
@@ -26,15 +34,25 @@ namespace SminexBimTools.Core
                 if (element == null)
                     continue;
 
-                Parameter parameter = FindParameter(element, parameterNames, kind, settings.SearchTypeParameters);
-                double? value = parameter != null ? ExtractValue(parameter) : null;
-                string usedName = parameter != null ? parameter.Definition.Name : null;
+                ParameterHit hit = Find(element, rules, kind, settings.SearchOrder);
 
-                // Для «Количества» элемент без параметра считается за 1 штуку.
-                if (value == null && kind == MeasureKind.Count)
+                double? value = null;
+                string unitLabel = null; // null => значение без размерности
+                if (hit != null)
+                    value = ExtractValue(hit.Parameter, out unitLabel);
+
+                string groupKey = null;
+                if (value != null)
                 {
+                    groupKey = BuildParameterKey(hit, kind, unitLabel);
+                    if (unitLabel == null && kind != MeasureKind.Count)
+                        result.RawCount++;
+                }
+                else if (kind == MeasureKind.Count)
+                {
+                    // Для «Количества» элемент без параметра считается за 1 штуку.
                     value = 1;
-                    usedName = "по числу элементов (1 шт за элемент)";
+                    groupKey = "по числу элементов (1 шт за элемент)";
                 }
 
                 if (value == null)
@@ -45,75 +63,103 @@ namespace SminexBimTools.Core
 
                 result.Counted++;
                 result.Total += value.Value;
-
-                if (usedName != null)
-                {
-                    result.UsedParameters.TryGetValue(usedName, out int usedCount);
-                    result.UsedParameters[usedName] = usedCount + 1;
-                }
+                Accumulate(result.ByParameter, groupKey, value.Value);
 
                 string categoryName = element.Category != null ? element.Category.Name : "Без категории";
-                if (!result.Categories.TryGetValue(categoryName, out CategoryTotal categoryTotal))
-                {
-                    categoryTotal = new CategoryTotal();
-                    result.Categories[categoryName] = categoryTotal;
-                }
-                categoryTotal.Sum += value.Value;
-                categoryTotal.Count++;
+                Accumulate(result.Categories, categoryName, value.Value);
             }
 
             return result;
         }
 
-        /// <summary>
-        /// Ищет параметр по списку имен: сначала в экземпляре, затем (опционально) в типе,
-        /// затем пробует системный параметр Revit как запасной вариант.
-        /// </summary>
-        private static Parameter FindParameter(Element element, IList<string> names, MeasureKind kind, bool searchTypeParameters)
+        private static void Accumulate(Dictionary<string, CategoryTotal> map, string key, double value)
         {
-            Parameter parameter = FindByNames(element, names);
-            if (parameter != null)
-                return parameter;
-
-            if (searchTypeParameters)
+            if (!map.TryGetValue(key, out CategoryTotal total))
             {
-                ElementId typeId = element.GetTypeId();
-                if (typeId != null && typeId != ElementId.InvalidElementId)
-                {
-                    Element typeElement = element.Document.GetElement(typeId);
-                    if (typeElement != null)
-                    {
-                        parameter = FindByNames(typeElement, names);
-                        if (parameter != null)
-                            return parameter;
-                    }
-                }
+                total = new CategoryTotal();
+                map[key] = total;
             }
 
-            BuiltInParameter builtIn = kind.FallbackBuiltInParameter();
-            if (builtIn != BuiltInParameter.INVALID)
+            total.Sum += value;
+            total.Count++;
+        }
+
+        private static string BuildParameterKey(ParameterHit hit, MeasureKind kind, string unitLabel)
+        {
+            string name = hit.Parameter.Definition.Name;
+
+            if (kind == MeasureKind.Count)
+                return string.Format("{0} ({1})", name, hit.SourceLabel);
+
+            return unitLabel != null
+                ? string.Format("{0} ({1}, {2})", name, hit.SourceLabel, unitLabel)
+                : string.Format("{0} ({1}, число — как есть)", name, hit.SourceLabel);
+        }
+
+        private static ParameterHit Find(Element element, IList<ParameterRule> rules, MeasureKind kind, IList<SearchStage> order)
+        {
+            Element typeElement = null;
+            ElementId typeId = element.GetTypeId();
+            if (typeId != null && typeId != ElementId.InvalidElementId)
+                typeElement = element.Document.GetElement(typeId);
+
+            foreach (SearchStage stage in order)
             {
-                Parameter fallback = element.get_Parameter(builtIn);
-                if (fallback != null && fallback.HasValue)
-                    return fallback;
+                switch (stage)
+                {
+                    case SearchStage.Instance:
+                    {
+                        Parameter parameter = FindByRules(element, rules, ParameterSource.Instance);
+                        if (parameter != null)
+                            return new ParameterHit { Parameter = parameter, SourceLabel = "экземпляр" };
+                        break;
+                    }
+
+                    case SearchStage.Type:
+                    {
+                        if (typeElement == null)
+                            break;
+                        Parameter parameter = FindByRules(typeElement, rules, ParameterSource.Type);
+                        if (parameter != null)
+                            return new ParameterHit { Parameter = parameter, SourceLabel = "тип" };
+                        break;
+                    }
+
+                    case SearchStage.System:
+                    {
+                        BuiltInParameter builtIn = kind.FallbackBuiltInParameter();
+                        if (builtIn == BuiltInParameter.INVALID)
+                            break;
+                        Parameter parameter = element.get_Parameter(builtIn);
+                        if (parameter != null && parameter.HasValue)
+                            return new ParameterHit { Parameter = parameter, SourceLabel = "системный" };
+                        break;
+                    }
+                }
             }
 
             return null;
         }
 
-        private static Parameter FindByNames(Element element, IList<string> names)
+        private static Parameter FindByRules(Element target, IList<ParameterRule> rules, ParameterSource stageSource)
         {
-            foreach (string rawName in names)
+            foreach (ParameterRule rule in rules)
             {
-                string name = rawName == null ? null : rawName.Trim();
+                if (rule == null)
+                    continue;
+
+                // Правило с явным источником срабатывает только на своем шаге.
+                if (rule.Source != ParameterSource.Auto && rule.Source != stageSource)
+                    continue;
+
+                string name = rule.Name == null ? null : rule.Name.Trim();
                 if (string.IsNullOrEmpty(name))
                     continue;
 
                 // У элемента может быть несколько параметров с одинаковым именем
-                // (например, общий параметр и параметр семейства) — LookupParameter
-                // вернул бы первый попавшийся, даже пустой. Перебираем все
-                // одноименные и берем первый со значением.
-                foreach (Parameter parameter in element.GetParameters(name))
+                // (например, общий параметр и параметр семейства) — перебираем
+                // все одноименные и берем первый со значением.
+                foreach (Parameter parameter in target.GetParameters(name))
                 {
                     if (parameter != null && parameter.HasValue)
                         return parameter;
@@ -124,48 +170,61 @@ namespace SminexBimTools.Core
         }
 
         /// <summary>
-        /// Читает значение параметра. Числа с физическим смыслом переводятся
-        /// из внутренних единиц Revit в метрические (м, м², м³).
+        /// Читает значение параметра. Для чисел с физическим смыслом (длина,
+        /// площадь, объем) значение переводится из внутренних единиц Revit
+        /// в метрические, а <paramref name="unitLabel"/> получает единицу
+        /// («м», «м²», «м³»). Для безразмерных значений (число, целое, текст)
+        /// unitLabel остается null, значение берется как есть.
         /// </summary>
-        private static double? ExtractValue(Parameter parameter)
+        private static double? ExtractValue(Parameter parameter, out string unitLabel)
         {
+            unitLabel = null;
+
             switch (parameter.StorageType)
             {
                 case StorageType.Double:
-                    return ConvertFromInternal(parameter.AsDouble(), parameter);
+                {
+                    double raw = parameter.AsDouble();
+                    ForgeTypeId dataType = parameter.Definition.GetDataType();
+
+                    if (dataType == SpecTypeId.Volume)
+                    {
+                        unitLabel = "м³";
+                        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.CubicMeters);
+                    }
+                    if (dataType == SpecTypeId.Area)
+                    {
+                        unitLabel = "м²";
+                        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.SquareMeters);
+                    }
+                    if (dataType == SpecTypeId.Length)
+                    {
+                        unitLabel = "м";
+                        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.Meters);
+                    }
+
+                    return raw;
+                }
 
                 case StorageType.Integer:
                     return parameter.AsInteger();
 
                 case StorageType.String:
+                {
                     string text = parameter.AsString();
                     if (string.IsNullOrWhiteSpace(text))
                         return null;
                     text = text.Replace(" ", string.Empty)
-                               .Replace(" ", string.Empty)
+                               .Replace(" ", string.Empty)
                                .Replace(',', '.');
                     return double.TryParse(text, NumberStyles.Any, CultureInfo.InvariantCulture, out double parsed)
                         ? parsed
                         : (double?)null;
+                }
 
                 default:
                     return null;
             }
-        }
-
-        private static double ConvertFromInternal(double value, Parameter parameter)
-        {
-            ForgeTypeId dataType = parameter.Definition.GetDataType();
-
-            if (dataType == SpecTypeId.Volume)
-                return UnitUtils.ConvertFromInternalUnits(value, UnitTypeId.CubicMeters);
-            if (dataType == SpecTypeId.Area)
-                return UnitUtils.ConvertFromInternalUnits(value, UnitTypeId.SquareMeters);
-            if (dataType == SpecTypeId.Length)
-                return UnitUtils.ConvertFromInternalUnits(value, UnitTypeId.Meters);
-
-            // Безразмерные значения (число, целое и т.п.) возвращаем как есть.
-            return value;
         }
 
         private static string Describe(Element element)
