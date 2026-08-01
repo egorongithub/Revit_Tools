@@ -25,6 +25,9 @@ namespace SminexBimTools.Core
         /// <summary>Описания элементов, у которых параметр не найден.</summary>
         public List<string> Skipped { get; } = new List<string>();
 
+        /// <summary>Идентификаторы пропущенных элементов (для выбора в модели).</summary>
+        public List<Autodesk.Revit.DB.ElementId> SkippedIds { get; } = new List<Autodesk.Revit.DB.ElementId>();
+
         /// <summary>Разбивка суммы по категориям: имя категории → итог.</summary>
         public Dictionary<string, CategoryTotal> Categories { get; } = new Dictionary<string, CategoryTotal>();
 
@@ -38,5 +41,8 @@ namespace SminexBimTools.Core
     {
         public double Sum { get; set; }
         public int Count { get; set; }
+
+        /// <summary>Идентификаторы элементов группы (для выбора в модели).</summary>
+        public List<Autodesk.Revit.DB.ElementId> ElementIds { get; } = new List<Autodesk.Revit.DB.ElementId>();
     }
 }

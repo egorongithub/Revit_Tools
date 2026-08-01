@@ -13,7 +13,8 @@ namespace SminexBimTools.Core
         private class ParameterHit
         {
             public Parameter Parameter;
-            public string SourceLabel; // экземпляр / тип / системный
+            public string SourceLabel;  // экземпляр / тип / системный
+            public ParameterRule Rule;  // null для системного шага
         }
 
         /// <summary>
@@ -46,28 +47,39 @@ namespace SminexBimTools.Core
                 if (hit != null)
                     value = ExtractValue(hit.Parameter, out unitLabel);
 
+                // Безразмерное значение с явно заданной единицей — переводим в м/м²/м³.
+                if (value != null && unitLabel == null && hit.Rule != null && hit.Rule.Unit != RawUnit.Auto)
+                {
+                    value *= RawUnits.Factor(hit.Rule.Unit);
+                    unitLabel = "число в " + RawUnits.Label(hit.Rule.Unit);
+                }
+
                 if (value == null)
                 {
                     result.Skipped.Add(Describe(element));
+                    result.SkippedIds.Add(element.Id);
                     continue;
                 }
 
-                string groupKey = BuildParameterKey(hit, unitLabel);
+                string groupKey = string.Format("{0} ({1}, {2})",
+                    hit.Parameter.Definition.Name,
+                    hit.SourceLabel,
+                    unitLabel ?? "число — как есть");
                 if (unitLabel == null)
                     result.RawCount++;
 
                 result.Counted++;
                 result.Total += value.Value;
-                Accumulate(result.ByParameter, groupKey, value.Value);
+                Accumulate(result.ByParameter, groupKey, value.Value, element.Id);
 
                 string categoryName = element.Category != null ? element.Category.Name : "Без категории";
-                Accumulate(result.Categories, categoryName, value.Value);
+                Accumulate(result.Categories, categoryName, value.Value, element.Id);
             }
 
             return result;
         }
 
-        private static void Accumulate(Dictionary<string, CategoryTotal> map, string key, double value)
+        private static void Accumulate(Dictionary<string, CategoryTotal> map, string key, double value, ElementId id)
         {
             if (!map.TryGetValue(key, out CategoryTotal total))
             {
@@ -77,6 +89,7 @@ namespace SminexBimTools.Core
 
             total.Sum += value;
             total.Count++;
+            total.ElementIds.Add(id);
         }
 
         private static SummationResult CountElements(Document document, ICollection<ElementId> elementIds)
@@ -93,19 +106,10 @@ namespace SminexBimTools.Core
                 result.Total += 1;
 
                 string categoryName = element.Category != null ? element.Category.Name : "Без категории";
-                Accumulate(result.Categories, categoryName, 1);
+                Accumulate(result.Categories, categoryName, 1, element.Id);
             }
 
             return result;
-        }
-
-        private static string BuildParameterKey(ParameterHit hit, string unitLabel)
-        {
-            string name = hit.Parameter.Definition.Name;
-
-            return unitLabel != null
-                ? string.Format("{0} ({1}, {2})", name, hit.SourceLabel, unitLabel)
-                : string.Format("{0} ({1}, число — как есть)", name, hit.SourceLabel);
         }
 
         private static ParameterHit Find(Element element, IList<ParameterRule> rules, MeasureKind kind, IList<SearchStage> order)
@@ -121,9 +125,9 @@ namespace SminexBimTools.Core
                 {
                     case SearchStage.Instance:
                     {
-                        Parameter parameter = FindByRules(element, rules, ParameterSource.Instance);
+                        Parameter parameter = FindByRules(element, rules, ParameterSource.Instance, out ParameterRule rule);
                         if (parameter != null)
-                            return new ParameterHit { Parameter = parameter, SourceLabel = "экземпляр" };
+                            return new ParameterHit { Parameter = parameter, SourceLabel = "экземпляр", Rule = rule };
                         break;
                     }
 
@@ -131,9 +135,9 @@ namespace SminexBimTools.Core
                     {
                         if (typeElement == null)
                             break;
-                        Parameter parameter = FindByRules(typeElement, rules, ParameterSource.Type);
+                        Parameter parameter = FindByRules(typeElement, rules, ParameterSource.Type, out ParameterRule rule);
                         if (parameter != null)
-                            return new ParameterHit { Parameter = parameter, SourceLabel = "тип" };
+                            return new ParameterHit { Parameter = parameter, SourceLabel = "тип", Rule = rule };
                         break;
                     }
 
@@ -144,7 +148,7 @@ namespace SminexBimTools.Core
                             break;
                         Parameter parameter = element.get_Parameter(builtIn);
                         if (parameter != null && parameter.HasValue)
-                            return new ParameterHit { Parameter = parameter, SourceLabel = "системный" };
+                            return new ParameterHit { Parameter = parameter, SourceLabel = "системный", Rule = null };
                         break;
                     }
                 }
@@ -153,7 +157,7 @@ namespace SminexBimTools.Core
             return null;
         }
 
-        private static Parameter FindByRules(Element target, IList<ParameterRule> rules, ParameterSource stageSource)
+        private static Parameter FindByRules(Element target, IList<ParameterRule> rules, ParameterSource stageSource, out ParameterRule matchedRule)
         {
             foreach (ParameterRule rule in rules)
             {
@@ -174,10 +178,14 @@ namespace SminexBimTools.Core
                 foreach (Parameter parameter in target.GetParameters(name))
                 {
                     if (parameter != null && parameter.HasValue)
+                    {
+                        matchedRule = rule;
                         return parameter;
+                    }
                 }
             }
 
+            matchedRule = null;
             return null;
         }
 

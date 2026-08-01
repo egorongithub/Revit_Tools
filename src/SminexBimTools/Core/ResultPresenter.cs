@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Windows.Interop;
 using Autodesk.Revit.UI;
 using SminexBimTools.Settings;
+using SminexBimTools.UI;
 
 namespace SminexBimTools.Core
 {
@@ -13,7 +15,7 @@ namespace SminexBimTools.Core
     {
         private const int MaxSkippedLines = 15;
 
-        public static void Show(MeasureKind kind, SummationResult result, PluginSettings settings)
+        public static void Show(UIDocument uidoc, MeasureKind kind, SummationResult result, PluginSettings settings)
         {
             string unit = kind.Unit();
             int decimals = kind == MeasureKind.Count ? 0 : settings.DecimalPlaces;
@@ -42,7 +44,26 @@ namespace SminexBimTools.Core
 
             dialog.ExpandedContent = BuildExpandedContent(result, unit, settings);
 
-            dialog.Show();
+            bool canSelect = uidoc != null
+                && (result.Categories.Count > 0 || result.ByParameter.Count > 0 || result.SkippedIds.Count > 0);
+            if (canSelect)
+            {
+                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1,
+                    "Выбрать элементы в модели…",
+                    "Выделить элементы по категориям, параметрам-источникам или пропущенные");
+            }
+
+            TaskDialogResult dialogResult = dialog.Show();
+
+            if (canSelect && dialogResult == TaskDialogResult.CommandLink1)
+            {
+                var window = new SelectElementsWindow(uidoc, result);
+                var helper = new WindowInteropHelper(window)
+                {
+                    Owner = uidoc.Application.MainWindowHandle
+                };
+                window.ShowDialog();
+            }
         }
 
         private static string BuildExpandedContent(SummationResult result, string unit, PluginSettings settings)

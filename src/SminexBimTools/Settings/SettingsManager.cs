@@ -73,9 +73,9 @@ namespace SminexBimTools.Settings
             {
                 settings.SearchOrder = new List<SearchStage>
                 {
-                    SearchStage.Type,
+                    SearchStage.System,
                     SearchStage.Instance,
-                    SearchStage.System
+                    SearchStage.Type
                 };
             }
 

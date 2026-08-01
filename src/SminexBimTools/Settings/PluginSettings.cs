@@ -25,13 +25,13 @@ namespace SminexBimTools.Settings
 
         /// <summary>
         /// Общий порядок поиска для правил с источником «Авто» и системного шага.
-        /// По умолчанию: тип → экземпляр → системные.
+        /// По умолчанию: системные → экземпляр → тип.
         /// </summary>
         public List<SearchStage> SearchOrder { get; set; } = new List<SearchStage>
         {
-            SearchStage.Type,
+            SearchStage.System,
             SearchStage.Instance,
-            SearchStage.System
+            SearchStage.Type
         };
 
         /// <summary>Число знаков после запятой в результатах.</summary>

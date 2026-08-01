@@ -39,7 +39,7 @@ namespace SminexBimTools.Commands
 
                 PluginSettings settings = SettingsManager.Load();
                 SummationResult result = MeasureEngine.Sum(uidoc.Document, ids, Kind, settings);
-                ResultPresenter.Show(Kind, result, settings);
+                ResultPresenter.Show(uidoc, Kind, result, settings);
 
                 return Result.Succeeded;
             }

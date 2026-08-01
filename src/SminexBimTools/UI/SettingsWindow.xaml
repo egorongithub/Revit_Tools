@@ -2,10 +2,12 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Sminex BIM Tools — настройки"
-        Width="760"
-        SizeToContent="Height"
+        Width="860"
+        Height="680"
+        MinWidth="760"
+        MinHeight="580"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize"
+        ResizeMode="CanResize"
         ShowInTaskbar="False"
         FontSize="13">
     <Window.Resources>
@@ -23,13 +25,23 @@
         </Style>
     </Window.Resources>
 
-    <StackPanel Margin="16">
-        <TextBlock TextWrapping="Wrap"
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   TextWrapping="Wrap"
                    Foreground="#FF606060"
                    Margin="0,0,0,10"
-                   Text="Правила проверяются сверху вниз — используется первый найденный параметр со значением. Источник «Авто» ищется по общему порядку поиска; явный источник («Экземпляр»/«Тип») — только на своем шаге."/>
+                   Text="Правила проверяются сверху вниз — используется первый найденный параметр со значением. Источник «Авто» ищется по общему порядку поиска; явный источник («Экземпляр»/«Тип») — только на своем шаге. «Размерность» применяется к безразмерным числовым параметрам: значение трактуется в выбранной единице и переводится в м/м²/м³; «Авто» — берется как есть."/>
 
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
             <Button Content="Добавить" Padding="10,3" Margin="0,0,6,0" Click="Add_Click"/>
             <Button Content="Удалить" Padding="10,3" Margin="0,0,6,0" Click="Remove_Click"/>
             <Button Content="▲" Padding="8,3" Margin="0,0,3,0" Click="RuleUp_Click"/>
@@ -38,43 +50,47 @@
             <Button x:Name="AnalyzeButton" Content="Проверить в модели" Padding="10,3" Click="Analyze_Click"/>
         </StackPanel>
 
-        <TabControl x:Name="Tabs" Height="230">
+        <TabControl x:Name="Tabs" Grid.Row="2">
             <TabItem Header="Объем">
                 <DataGrid x:Name="VolumeGrid">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
                         <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                        <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="300"/>
+                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="120"/>
+                        <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>
             <TabItem Header="Площадь">
                 <DataGrid x:Name="AreaGrid">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
                         <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                        <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="300"/>
+                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="120"/>
+                        <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>
             <TabItem Header="Длина">
                 <DataGrid x:Name="LengthGrid">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
                         <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                        <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="300"/>
+                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="120"/>
+                        <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>
         </TabControl>
 
-        <TextBlock TextWrapping="Wrap"
+        <TextBlock Grid.Row="3"
+                   TextWrapping="Wrap"
                    Foreground="#FF909090"
                    FontSize="11.5"
                    Margin="0,4,0,0"
-                   Text="Статусы: ✓ подходит; • найден, но без размерности (значение берется как есть); ✗ недопустимый тип данных; — не найден. Проверяются проектные и общие параметры документа; параметры, определенные внутри семейств, проверке недоступны, но при подсчете читаются."/>
+                   Text="Статусы: ✓ подходит; • найден, но без размерности (значение берется как есть или в заданной размерности); ✗ недопустимый тип данных; — не найден. Проверяются проектные и общие параметры документа; параметры, определенные внутри семейств, проверке недоступны, но при подсчете читаются."/>
 
-        <Grid Margin="0,14,0,0">
+        <Grid Grid.Row="4" Margin="0,14,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -107,7 +123,7 @@
             </StackPanel>
         </Grid>
 
-        <Grid Margin="0,18,0,0">
+        <Grid Grid.Row="5" Margin="0,18,0,0">
             <Button Content="По умолчанию"
                     HorizontalAlignment="Left"
                     Padding="14,5"
@@ -123,5 +139,5 @@
                         IsCancel="True"/>
             </StackPanel>
         </Grid>
-    </StackPanel>
+    </Grid>
 </Window>

@@ -51,6 +51,10 @@ namespace SminexBimTools.UI
             foreach (DataGrid grid in AllGrids())
                 ((DataGridComboBoxColumn)grid.Columns[1]).ItemsSource = SourceLabels;
 
+            ((DataGridComboBoxColumn)VolumeGrid.Columns[2]).ItemsSource = new[] { "Авто", "мм³", "л", "м³" };
+            ((DataGridComboBoxColumn)AreaGrid.Columns[2]).ItemsSource = new[] { "Авто", "мм²", "см²", "м²" };
+            ((DataGridComboBoxColumn)LengthGrid.Columns[2]).ItemsSource = new[] { "Авто", "мм", "см", "м" };
+
             if (_document == null)
             {
                 PickButton.IsEnabled = false;
@@ -87,7 +91,7 @@ namespace SminexBimTools.UI
             foreach (ParameterRule rule in rules)
             {
                 if (rule != null)
-                    target.Add(new RuleVm(rule.Name, rule.Source));
+                    target.Add(new RuleVm(rule.Name, rule.Source, rule.Unit));
             }
         }
 
@@ -133,7 +137,7 @@ namespace SminexBimTools.UI
         {
             return rules
                 .Where(vm => !string.IsNullOrWhiteSpace(vm.Name))
-                .Select(vm => new ParameterRule(vm.Name.Trim(), vm.Source))
+                .Select(vm => new ParameterRule(vm.Name.Trim(), vm.Source) { Unit = vm.Unit })
                 .ToList();
         }
 
@@ -202,7 +206,7 @@ namespace SminexBimTools.UI
         private void Add_Click(object sender, RoutedEventArgs e)
         {
             ObservableCollection<RuleVm> rules = CurrentRules();
-            var vm = new RuleVm(string.Empty, ParameterSource.Auto);
+            var vm = new RuleVm(string.Empty, ParameterSource.Auto, RawUnit.Auto);
             rules.Add(vm);
 
             DataGrid grid = CurrentGrid();
@@ -308,7 +312,7 @@ namespace SminexBimTools.UI
             {
                 if (existing.Contains(name))
                     continue;
-                rules.Add(new RuleVm(name, ParameterSource.Auto)
+                rules.Add(new RuleVm(name, ParameterSource.Auto, RawUnit.Auto)
                 {
                     Status = ModelParameterAnalyzer.Evaluate(name, kind, map)
                 });
@@ -322,12 +326,14 @@ namespace SminexBimTools.UI
     {
         private string _name;
         private string _sourceLabel;
+        private string _unitLabel;
         private string _status;
 
-        public RuleVm(string name, ParameterSource source)
+        public RuleVm(string name, ParameterSource source, RawUnit unit)
         {
             _name = name ?? string.Empty;
             _sourceLabel = ToLabel(source);
+            _unitLabel = RawUnits.Label(unit);
             _status = string.Empty;
         }
 
@@ -341,6 +347,17 @@ namespace SminexBimTools.UI
         {
             get { return _sourceLabel; }
             set { _sourceLabel = value; OnPropertyChanged(nameof(SourceLabel)); }
+        }
+
+        public string UnitLabel
+        {
+            get { return _unitLabel; }
+            set { _unitLabel = value; OnPropertyChanged(nameof(UnitLabel)); }
+        }
+
+        public RawUnit Unit
+        {
+            get { return RawUnits.FromLabel(_unitLabel); }
         }
 
         public string Status
