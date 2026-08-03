@@ -20,15 +20,7 @@ namespace SminexBimTools.Core
             string unit = kind.Unit();
             int decimals = kind == MeasureKind.Count ? 0 : settings.DecimalPlaces;
             string totalText = NumberFormatter.Format(result.Total, ResolveDecimals(result.Total, decimals), settings.RoundUp);
-
-            var dialog = new TaskDialog("Sminex BIM Tools")
-            {
-                TitleAutoPrefix = false,
-                MainInstruction = string.Format("{0}: {1} {2}", kind.SummaryTitle(), totalText, unit),
-                CommonButtons = TaskDialogCommonButtons.Close,
-                DefaultButton = TaskDialogResult.Close,
-                AllowCancellation = true
-            };
+            string header = string.Format("{0}: {1} {2}", kind.SummaryTitle(), totalText, unit);
 
             var content = new StringBuilder();
             content.AppendLine(string.Format("Учтено элементов: {0} из {1}.", result.Counted, result.TotalElements));
@@ -40,30 +32,27 @@ namespace SminexBimTools.Core
                 content.AppendLine(string.Format(
                     "⚠ У {0} элем. значение взято из безразмерного параметра (число/текст) и просуммировано как есть — проверьте единицы.",
                     result.RawCount));
-            dialog.MainContent = content.ToString().TrimEnd();
-
-            dialog.ExpandedContent = BuildExpandedContent(result, unit, settings);
 
             bool canSelect = uidoc != null
                 && (result.Categories.Count > 0 || result.ByParameter.Count > 0 || result.SkippedIds.Count > 0);
-            if (canSelect)
-            {
-                dialog.AddCommandLink(TaskDialogCommandLinkId.CommandLink1,
-                    "Выбрать элементы в модели…",
-                    "Выделить элементы по категориям, параметрам-источникам или пропущенные");
-            }
 
-            TaskDialogResult dialogResult = dialog.Show();
+            var window = new ResultWindow(
+                header,
+                totalText,
+                content.ToString().TrimEnd(),
+                BuildExpandedContent(result, unit, settings),
+                canSelect ? uidoc : null,
+                canSelect ? result : null);
 
-            if (canSelect && dialogResult == TaskDialogResult.CommandLink1)
+            if (uidoc != null)
             {
-                var window = new SelectElementsWindow(uidoc, result);
                 var helper = new WindowInteropHelper(window)
                 {
                     Owner = uidoc.Application.MainWindowHandle
                 };
-                window.ShowDialog();
             }
+
+            window.ShowDialog();
         }
 
         private static string BuildExpandedContent(SummationResult result, string unit, PluginSettings settings)

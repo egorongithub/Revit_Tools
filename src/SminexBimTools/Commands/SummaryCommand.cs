@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Windows.Interop;
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using SminexBimTools.Core;
 using SminexBimTools.Settings;
+using SminexBimTools.UI;
 
 namespace SminexBimTools.Commands
 {
@@ -75,19 +77,17 @@ namespace SminexBimTools.Commands
                         expanded.AppendLine(string.Format("{0}: {1}", kind.DisplayName(), string.Join("; ", notes)));
                 }
 
-                var dialog = new TaskDialog("Sminex BIM Tools")
+                string contentText = content.ToString().TrimEnd();
+                var window = new ResultWindow(
+                    string.Format("Сводка: {0} элем.", ids.Count),
+                    contentText,
+                    contentText,
+                    expanded.Length > 0 ? expanded.ToString().TrimEnd() : null);
+                var helper = new WindowInteropHelper(window)
                 {
-                    TitleAutoPrefix = false,
-                    MainInstruction = string.Format("Сводка: {0} элем.", ids.Count),
-                    MainContent = content.ToString().TrimEnd(),
-                    CommonButtons = TaskDialogCommonButtons.Close,
-                    DefaultButton = TaskDialogResult.Close,
-                    AllowCancellation = true
+                    Owner = uidoc.Application.MainWindowHandle
                 };
-                if (expanded.Length > 0)
-                    dialog.ExpandedContent = expanded.ToString().TrimEnd();
-
-                dialog.Show();
+                window.ShowDialog();
                 return Result.Succeeded;
             }
             catch (Exception exception)
