@@ -11,14 +11,27 @@
     <Version>1.0.0</Version>
     <Company>Sminex</Company>
     <Product>Sminex BIM Tools</Product>
-    <Description>Инструменты Sminex для Autodesk Revit 2022/2024</Description>
+    <Description>Инструменты Sminex для Autodesk Revit 2020–2024</Description>
     <Copyright>© Sminex</Copyright>
-    <Configurations>Debug R2022;Release R2022;Debug R2024;Release R2024</Configurations>
+    <Configurations>Debug R2020;Release R2020;Debug R2021;Release R2021;Debug R2022;Release R2022;Debug R2024;Release R2024</Configurations>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateDependencyFile>false</GenerateDependencyFile>
   </PropertyGroup>
 
-  <!-- Версия Revit определяется конфигурацией сборки -->
+  <!-- Версия Revit определяется конфигурацией сборки.
+       Revit 2020 работает на .NET Framework 4.7.2, поэтому для него
+       целевой фреймворк понижается до net472. -->
+  <PropertyGroup Condition="$(Configuration.Contains('R2020'))">
+    <RevitVersion>2020</RevitVersion>
+    <TargetFramework>net472</TargetFramework>
+    <DefineConstants>$(DefineConstants);REVIT2020</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(Configuration.Contains('R2021'))">
+    <RevitVersion>2021</RevitVersion>
+    <DefineConstants>$(DefineConstants);REVIT2021</DefineConstants>
+  </PropertyGroup>
+
   <PropertyGroup Condition="$(Configuration.Contains('R2022'))">
     <RevitVersion>2022</RevitVersion>
     <DefineConstants>$(DefineConstants);REVIT2022</DefineConstants>

@@ -11,17 +11,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        revit: ['2022', '2024']
+        revit: ['2020', '2021', '2022', '2024']
     steps:
       - uses: actions/checkout@v4
 
       - uses: microsoft/setup-msbuild@v2
 
-      - name: Restore
-        run: dotnet restore SminexBimTools.sln
-
       - name: Build
-        run: msbuild SminexBimTools.sln /restore:false /p:Configuration="Release R${{ matrix.revit }}" /p:Platform="Any CPU" /v:minimal
+        # Restore выполняется вместе со сборкой в той же конфигурации:
+        # от нее зависят TargetFramework (net472 для R2020) и версия
+        # NuGet-пакетов Revit API.
+        run: msbuild SminexBimTools.sln /restore /p:Configuration="Release R${{ matrix.revit }}" /p:Platform="Any CPU" /v:minimal
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
