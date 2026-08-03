@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Сборка и установка Sminex BIM Tools для Revit 2022 и 2024.
+    Сборка и установка Sminex BIM Tools для Revit 2020, 2021, 2022 и 2024.
 
 .DESCRIPTION
     Собирает плагин в конфигурации Release для каждой указанной версии Revit
@@ -9,11 +9,12 @@
     пользователя: %AppData%\Autodesk\Revit\Addins\<версия>.
 
 .EXAMPLE
-    .\install.ps1                     # собрать и установить для Revit 2022 и 2024
+    .\install.ps1                     # собрать и установить для всех поддерживаемых версий
     .\install.ps1 -RevitVersions 2024 # только для Revit 2024
+    .\install.ps1 -RevitVersions 2020,2021 # только для Revit 2020 и 2021
 #>
 param(
-    [string[]] $RevitVersions = @('2022', '2024'),
+    [string[]] $RevitVersions = @('2020', '2021', '2022', '2024'),
     [string] $Configuration = 'Release'
 )
 
