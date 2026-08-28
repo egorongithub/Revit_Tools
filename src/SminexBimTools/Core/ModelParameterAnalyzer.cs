@@ -10,6 +10,9 @@ namespace SminexBimTools.Core
         public string Name { get; set; }
 #if REVIT2020 || REVIT2021
         public ParameterType DataType { get; set; }
+
+        /// <summary>Тип единиц — для классификации измерения (длина/площадь/объем/масса).</summary>
+        public UnitType UnitType { get; set; }
 #else
         public ForgeTypeId DataType { get; set; }
 #endif
@@ -45,6 +48,7 @@ namespace SminexBimTools.Core
 #if REVIT2020 || REVIT2021
 #pragma warning disable CS0618
                     DataType = definition.ParameterType,
+                    UnitType = definition.UnitType,
 #pragma warning restore CS0618
 #else
                     DataType = definition.GetDataType(),
@@ -116,21 +120,22 @@ namespace SminexBimTools.Core
             if (!projectParameters.TryGetValue(name, out ProjectParameterInfo info))
                 return "— не найден среди параметров проекта";
 
+            // Измерение параметра определяется по допустимым единицам его типа
+            // данных: «Размер воздуховода», «Толщина изоляции» и т.п. — тоже длины.
 #if REVIT2020 || REVIT2021
             ParameterType dataType = info.DataType;
-            ParameterType expected = ExpectedType(kind);
-            bool typeMatches = expected != ParameterType.Invalid && dataType == expected;
+            ValueDimension dimension = UnitClassifier.Classify(info.UnitType);
             bool isNumberLike = dataType == ParameterType.Number || dataType == ParameterType.Integer;
             bool isText = dataType == ParameterType.Text;
 #else
             ForgeTypeId dataType = info.DataType;
-            ForgeTypeId expected = ExpectedSpec(kind);
-            bool typeMatches = expected != null && dataType == expected;
+            ValueDimension dimension = UnitClassifier.Classify(dataType);
             bool isNumberLike = dataType == SpecTypeId.Number || dataType == SpecTypeId.Int.Integer;
             bool isText = dataType == SpecTypeId.String.Text;
 #endif
+            ValueDimension expected = UnitClassifier.ExpectedDimension(kind);
 
-            if (typeMatches)
+            if (expected != ValueDimension.None && dimension == expected)
                 return "✓ найден: " + GetDataTypeLabel(dataType);
             if (isNumberLike)
                 return "• найден, без размерности — значение будет взято как есть";
@@ -139,31 +144,5 @@ namespace SminexBimTools.Core
 
             return "✗ тип данных не подходит: " + GetDataTypeLabel(dataType);
         }
-
-#if REVIT2020 || REVIT2021
-        private static ParameterType ExpectedType(MeasureKind kind)
-        {
-            switch (kind)
-            {
-                case MeasureKind.Volume: return ParameterType.Volume;
-                case MeasureKind.Area: return ParameterType.Area;
-                case MeasureKind.Length: return ParameterType.Length;
-                case MeasureKind.Mass: return ParameterType.Mass;
-                default: return ParameterType.Invalid;
-            }
-        }
-#else
-        private static ForgeTypeId ExpectedSpec(MeasureKind kind)
-        {
-            switch (kind)
-            {
-                case MeasureKind.Volume: return SpecTypeId.Volume;
-                case MeasureKind.Area: return SpecTypeId.Area;
-                case MeasureKind.Length: return SpecTypeId.Length;
-                case MeasureKind.Mass: return SpecTypeId.Mass;
-                default: return null;
-            }
-        }
-#endif
     }
 }

@@ -314,59 +314,24 @@ namespace SminexBimTools.Core
                 case StorageType.Double:
                 {
                     double raw = parameter.AsDouble();
-#if REVIT2020 || REVIT2021
-                    // До Revit 2022 нет Definition.GetDataType()/ForgeTypeId —
-                    // тип данных и единицы определяются через классические
-                    // ParameterType и DisplayUnitType (в 2021 они помечены
-                    // устаревшими, но полностью работоспособны).
-#pragma warning disable CS0618
-                    ParameterType dataType = parameter.Definition.ParameterType;
 
-                    if (dataType == ParameterType.Volume)
-                    {
-                        unitLabel = "м³";
-                        return UnitUtils.ConvertFromInternalUnits(raw, DisplayUnitType.DUT_CUBIC_METERS);
-                    }
-                    if (dataType == ParameterType.Area)
-                    {
-                        unitLabel = "м²";
-                        return UnitUtils.ConvertFromInternalUnits(raw, DisplayUnitType.DUT_SQUARE_METERS);
-                    }
-                    if (dataType == ParameterType.Length)
-                    {
-                        unitLabel = "м";
-                        return UnitUtils.ConvertFromInternalUnits(raw, DisplayUnitType.DUT_METERS);
-                    }
-                    if (dataType == ParameterType.Mass)
-                    {
-                        unitLabel = "кг";
-                        return UnitUtils.ConvertFromInternalUnits(raw, DisplayUnitType.DUT_KILOGRAMS_MASS);
-                    }
+                    // Измерение определяется по допустимым единицам типа данных —
+                    // так конвертируются не только «Длина»/«Площадь»/«Объем»/«Масса»,
+                    // но и специальные виды: «Размер воздуховода», «Размер трубы»,
+                    // толщины изоляции и т.п.
+#if REVIT2020 || REVIT2021
+#pragma warning disable CS0618
+                    ValueDimension dimension = UnitClassifier.Classify(parameter.Definition.UnitType);
 #pragma warning restore CS0618
 #else
-                    ForgeTypeId dataType = parameter.Definition.GetDataType();
-
-                    if (dataType == SpecTypeId.Volume)
-                    {
-                        unitLabel = "м³";
-                        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.CubicMeters);
-                    }
-                    if (dataType == SpecTypeId.Area)
-                    {
-                        unitLabel = "м²";
-                        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.SquareMeters);
-                    }
-                    if (dataType == SpecTypeId.Length)
-                    {
-                        unitLabel = "м";
-                        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.Meters);
-                    }
-                    if (dataType == SpecTypeId.Mass)
-                    {
-                        unitLabel = "кг";
-                        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.Kilograms);
-                    }
+                    ValueDimension dimension = UnitClassifier.Classify(parameter.Definition.GetDataType());
 #endif
+                    if (dimension != ValueDimension.None)
+                    {
+                        unitLabel = UnitClassifier.UnitLabel(dimension);
+                        return UnitClassifier.ConvertFromInternal(raw, dimension);
+                    }
+
                     return raw;
                 }
 
