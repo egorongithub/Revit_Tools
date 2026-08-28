@@ -5,7 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
+using System.Windows.Threading;
 using Autodesk.Revit.DB;
 using SminexBimTools.Core;
 using SminexBimTools.Settings;
@@ -27,6 +27,18 @@ namespace SminexBimTools.UI
             { SearchStage.System, "Системные" }
         };
 
+        private const string InfoText =
+            "• Правила проверяются сверху вниз — используется первый найденный параметр со значением.\n\n" +
+            "• Источник «Авто» ищется по общему порядку поиска (внизу окна); «Экземпляр» или «Тип» — только там.\n\n" +
+            "• Исключения по категориям: если для категории элемента заданы правила-исключения, действуют только они — " +
+            "общие правила и системный параметр Revit не используются, элемент без значения попадает в «пропущенные». " +
+            "Правила исключений проверяются строго сверху вниз.\n\n" +
+            "• Вид параметра не важен: по имени находится любой параметр — системный, общий, проекта или семейства. " +
+            "Кнопка «Проверить в модели» видит только проектные и общие параметры документа; параметры семейств " +
+            "при подсчете читаются, но проверке недоступны.\n\n" +
+            "• «Размерность» — для безразмерных чисел и текста: значение трактуется в выбранной единице и переводится " +
+            "в метрические. «Авто» — берется как есть.";
+
         private readonly Document _document;
 
         private readonly ObservableCollection<RuleVm> _volumeRules = new ObservableCollection<RuleVm>();
@@ -38,8 +50,9 @@ namespace SminexBimTools.UI
         private readonly ObservableCollection<RuleVm> _lengthCategoryRules = new ObservableCollection<RuleVm>();
         private readonly ObservableCollection<RuleVm> _massCategoryRules = new ObservableCollection<RuleVm>();
 
+        private Dictionary<string, DataGrid> _gridsByKey;
         private Dictionary<DataGrid, ObservableCollection<RuleVm>> _gridRules;
-        private DataGrid _activeGrid;
+        private Dictionary<DataGrid, MeasureKind> _gridKinds;
 
         public PluginSettings Settings { get; private set; }
 
@@ -53,6 +66,18 @@ namespace SminexBimTools.UI
             for (int i = 0; i <= 6; i++)
                 DecimalsCombo.Items.Add(i);
 
+            _gridsByKey = new Dictionary<string, DataGrid>
+            {
+                { "Volume", VolumeGrid },
+                { "Area", AreaGrid },
+                { "Length", LengthGrid },
+                { "Mass", MassGrid },
+                { "VolumeCategory", VolumeCategoryGrid },
+                { "AreaCategory", AreaCategoryGrid },
+                { "LengthCategory", LengthCategoryGrid },
+                { "MassCategory", MassCategoryGrid }
+            };
+
             _gridRules = new Dictionary<DataGrid, ObservableCollection<RuleVm>>
             {
                 { VolumeGrid, _volumeRules },
@@ -65,11 +90,20 @@ namespace SminexBimTools.UI
                 { MassCategoryGrid, _massCategoryRules }
             };
 
-            foreach (KeyValuePair<DataGrid, ObservableCollection<RuleVm>> pair in _gridRules)
+            _gridKinds = new Dictionary<DataGrid, MeasureKind>
             {
+                { VolumeGrid, MeasureKind.Volume },
+                { AreaGrid, MeasureKind.Area },
+                { LengthGrid, MeasureKind.Length },
+                { MassGrid, MeasureKind.Mass },
+                { VolumeCategoryGrid, MeasureKind.Volume },
+                { AreaCategoryGrid, MeasureKind.Area },
+                { LengthCategoryGrid, MeasureKind.Length },
+                { MassCategoryGrid, MeasureKind.Mass }
+            };
+
+            foreach (KeyValuePair<DataGrid, ObservableCollection<RuleVm>> pair in _gridRules)
                 pair.Key.ItemsSource = pair.Value;
-                pair.Key.GotKeyboardFocus += Grid_GotKeyboardFocus;
-            }
 
             // В общих таблицах комбобоксы — колонки 1 и 2, в таблицах
             // исключений (есть колонка «Категория») — колонки 2 и 3.
@@ -82,17 +116,26 @@ namespace SminexBimTools.UI
             SetupComboColumns(LengthCategoryGrid, 2, new[] { "Авто", "мм", "см", "м" });
             SetupComboColumns(MassCategoryGrid, 2, new[] { "Авто", "г", "кг", "т" });
 
-            Tabs.SelectionChanged += (s, e) =>
+            InfoButton.ToolTip = new TextBlock
             {
-                if (ReferenceEquals(e.OriginalSource, Tabs))
-                    _activeGrid = null;
+                Text = InfoText,
+                TextWrapping = TextWrapping.Wrap,
+                MaxWidth = 480
             };
 
             if (_document == null)
             {
-                PickButton.IsEnabled = false;
                 AnalyzeButton.IsEnabled = false;
-                PickButton.ToolTip = AnalyzeButton.ToolTip = "Нет открытого документа";
+                AnalyzeButton.ToolTip = "Нет открытого документа";
+                foreach (Button pickButton in new[]
+                {
+                    VolumePickButton, AreaPickButton, LengthPickButton, MassPickButton,
+                    VolumeCatPickButton, AreaCatPickButton, LengthCatPickButton, MassCatPickButton
+                })
+                {
+                    pickButton.IsEnabled = false;
+                    pickButton.ToolTip = "Нет открытого документа";
+                }
             }
 
             LoadToUi(Settings);
@@ -104,10 +147,12 @@ namespace SminexBimTools.UI
             ((DataGridComboBoxColumn)grid.Columns[sourceColumnIndex + 1]).ItemsSource = unitLabels;
         }
 
-        private void Grid_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        /// <summary>Таблица, к которой относится нажатая кнопка секции (по Tag).</summary>
+        private DataGrid ResolveGrid(object sender)
         {
-            if (sender is DataGrid grid)
-                _activeGrid = grid;
+            var button = sender as Button;
+            string key = button != null ? button.Tag as string : null;
+            return key != null && _gridsByKey.TryGetValue(key, out DataGrid grid) ? grid : null;
         }
 
         // ---------- загрузка/выгрузка ----------
@@ -255,76 +300,58 @@ namespace SminexBimTools.UI
             LoadToUi(PluginSettings.CreateDefault());
         }
 
-        // ---------- операции со списком правил ----------
-
-        /// <summary>
-        /// Таблица, на которую действуют кнопки: последняя сфокусированная
-        /// на текущей вкладке; иначе — общая таблица вкладки.
-        /// </summary>
-        private DataGrid CurrentGrid()
+        private void Info_Click(object sender, RoutedEventArgs e)
         {
-            if (_activeGrid != null && _activeGrid.IsVisible)
-                return _activeGrid;
-
-            switch (Tabs.SelectedIndex)
-            {
-                case 0: return VolumeGrid;
-                case 1: return AreaGrid;
-                case 2: return LengthGrid;
-                default: return MassGrid;
-            }
+            MessageBox.Show(this, InfoText, "Sminex BIM Tools — как работают правила",
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private ObservableCollection<RuleVm> CurrentRules()
-        {
-            return _gridRules[CurrentGrid()];
-        }
+        // ---------- операции со строками таблиц (кнопки секций) ----------
 
-        private MeasureKind CurrentKind()
+        private void SectionAdd_Click(object sender, RoutedEventArgs e)
         {
-            switch (Tabs.SelectedIndex)
-            {
-                case 0: return MeasureKind.Volume;
-                case 1: return MeasureKind.Area;
-                case 2: return MeasureKind.Length;
-                default: return MeasureKind.Mass;
-            }
-        }
-
-        private void Add_Click(object sender, RoutedEventArgs e)
-        {
-            ObservableCollection<RuleVm> rules = CurrentRules();
-            var vm = new RuleVm(string.Empty, ParameterSource.Auto, RawUnit.Auto);
-            rules.Add(vm);
-
-            DataGrid grid = CurrentGrid();
-            grid.SelectedItem = vm;
-            grid.ScrollIntoView(vm);
-        }
-
-        private void Remove_Click(object sender, RoutedEventArgs e)
-        {
-            if (CurrentGrid().SelectedItem is RuleVm vm)
-                CurrentRules().Remove(vm);
-        }
-
-        private void RuleUp_Click(object sender, RoutedEventArgs e)
-        {
-            MoveSelectedRule(-1);
-        }
-
-        private void RuleDown_Click(object sender, RoutedEventArgs e)
-        {
-            MoveSelectedRule(1);
-        }
-
-        private void MoveSelectedRule(int delta)
-        {
-            DataGrid grid = CurrentGrid();
-            ObservableCollection<RuleVm> rules = _gridRules[grid];
-            if (!(grid.SelectedItem is RuleVm vm))
+            DataGrid grid = ResolveGrid(sender);
+            if (grid == null)
                 return;
 
+            var vm = new RuleVm(string.Empty, ParameterSource.Auto, RawUnit.Auto);
+            _gridRules[grid].Add(vm);
+
+            grid.SelectedItem = vm;
+            grid.ScrollIntoView(vm);
+
+            // Сразу открываем редактирование первой колонки — понятно, что делать.
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                grid.Focus();
+                grid.CurrentCell = new DataGridCellInfo(vm, grid.Columns[0]);
+                grid.BeginEdit();
+            }));
+        }
+
+        private void SectionRemove_Click(object sender, RoutedEventArgs e)
+        {
+            DataGrid grid = ResolveGrid(sender);
+            if (grid != null && grid.SelectedItem is RuleVm vm)
+                _gridRules[grid].Remove(vm);
+        }
+
+        private void SectionUp_Click(object sender, RoutedEventArgs e)
+        {
+            MoveSelectedRule(ResolveGrid(sender), -1);
+        }
+
+        private void SectionDown_Click(object sender, RoutedEventArgs e)
+        {
+            MoveSelectedRule(ResolveGrid(sender), 1);
+        }
+
+        private void MoveSelectedRule(DataGrid grid, int delta)
+        {
+            if (grid == null || !(grid.SelectedItem is RuleVm vm))
+                return;
+
+            ObservableCollection<RuleVm> rules = _gridRules[grid];
             int index = rules.IndexOf(vm);
             int newIndex = index + delta;
             if (index < 0 || newIndex < 0 || newIndex >= rules.Count)
@@ -332,6 +359,36 @@ namespace SminexBimTools.UI
 
             rules.Move(index, newIndex);
             grid.SelectedItem = vm;
+        }
+
+        private void SectionPick_Click(object sender, RoutedEventArgs e)
+        {
+            DataGrid grid = ResolveGrid(sender);
+            if (grid == null || _document == null)
+                return;
+
+            var picker = new ParameterPickerWindow(_document) { Owner = this };
+            if (picker.ShowDialog() != true)
+                return;
+
+            ObservableCollection<RuleVm> rules = _gridRules[grid];
+            var existing = new HashSet<string>(
+                rules.Select(r => (r.Name ?? string.Empty).Trim()),
+                StringComparer.OrdinalIgnoreCase);
+
+            Dictionary<string, ProjectParameterInfo> map = ModelParameterAnalyzer.Collect(_document);
+            MeasureKind kind = _gridKinds[grid];
+
+            foreach (string name in picker.SelectedNames)
+            {
+                if (existing.Contains(name))
+                    continue;
+                rules.Add(new RuleVm(name, ParameterSource.Auto, RawUnit.Auto)
+                {
+                    Status = ModelParameterAnalyzer.Evaluate(name, kind, map)
+                });
+                existing.Add(name);
+            }
         }
 
         // ---------- порядок поиска ----------
@@ -368,48 +425,11 @@ namespace SminexBimTools.UI
 
             Dictionary<string, ProjectParameterInfo> map = ModelParameterAnalyzer.Collect(_document);
 
-            EvaluateRules(_volumeRules, MeasureKind.Volume, map);
-            EvaluateRules(_areaRules, MeasureKind.Area, map);
-            EvaluateRules(_lengthRules, MeasureKind.Length, map);
-            EvaluateRules(_massRules, MeasureKind.Mass, map);
-            EvaluateRules(_volumeCategoryRules, MeasureKind.Volume, map);
-            EvaluateRules(_areaCategoryRules, MeasureKind.Area, map);
-            EvaluateRules(_lengthCategoryRules, MeasureKind.Length, map);
-            EvaluateRules(_massCategoryRules, MeasureKind.Mass, map);
-        }
-
-        private static void EvaluateRules(ObservableCollection<RuleVm> rules, MeasureKind kind, Dictionary<string, ProjectParameterInfo> map)
-        {
-            foreach (RuleVm vm in rules)
-                vm.Status = ModelParameterAnalyzer.Evaluate(vm.Name, kind, map);
-        }
-
-        private void Pick_Click(object sender, RoutedEventArgs e)
-        {
-            if (_document == null)
-                return;
-
-            var picker = new ParameterPickerWindow(_document) { Owner = this };
-            if (picker.ShowDialog() != true)
-                return;
-
-            ObservableCollection<RuleVm> rules = CurrentRules();
-            var existing = new HashSet<string>(
-                rules.Select(r => (r.Name ?? string.Empty).Trim()),
-                StringComparer.OrdinalIgnoreCase);
-
-            Dictionary<string, ProjectParameterInfo> map = ModelParameterAnalyzer.Collect(_document);
-            MeasureKind kind = CurrentKind();
-
-            foreach (string name in picker.SelectedNames)
+            foreach (KeyValuePair<DataGrid, ObservableCollection<RuleVm>> pair in _gridRules)
             {
-                if (existing.Contains(name))
-                    continue;
-                rules.Add(new RuleVm(name, ParameterSource.Auto, RawUnit.Auto)
-                {
-                    Status = ModelParameterAnalyzer.Evaluate(name, kind, map)
-                });
-                existing.Add(name);
+                MeasureKind kind = _gridKinds[pair.Key];
+                foreach (RuleVm vm in pair.Value)
+                    vm.Status = ModelParameterAnalyzer.Evaluate(vm.Name, kind, map);
             }
         }
     }

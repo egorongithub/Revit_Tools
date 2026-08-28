@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Sminex BIM Tools — настройки"
         Width="880"
-        Height="760"
+        Height="720"
         MinWidth="780"
-        MinHeight="640"
+        MinHeight="620"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResize"
         ShowInTaskbar="False"
@@ -23,50 +23,66 @@
             <Setter Property="RowHeight" Value="26"/>
             <Setter Property="GridLinesVisibility" Value="Horizontal"/>
         </Style>
-        <Style x:Key="SectionHeader" TargetType="TextBlock">
+        <Style x:Key="SectionTitle" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="2,6,0,3"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="MiniButton" TargetType="Button">
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="Margin" Value="5,0,0,0"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        <Style x:Key="LegendText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FF909090"/>
+            <Setter Property="FontSize" Value="11.5"/>
+            <Setter Property="Margin" Value="2,3,0,0"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
         </Style>
     </Window.Resources>
 
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0"
-                   TextWrapping="Wrap"
-                   Foreground="#FF606060"
-                   Margin="0,0,0,10"
-                   Text="Правила проверяются сверху вниз — используется первый найденный параметр со значением. В общих правилах источник «Авто» ищется по общему порядку поиска, явный источник — только на своем шаге. Если для категории элемента заданы исключения, используются ТОЛЬКО они: строки общих правил и системный параметр Revit к таким элементам не применяются, а правила исключений проверяются строго сверху вниз. Вид параметра не важен — ищется любой параметр с таким именем (системный, общий, проекта или семейства) в месте, заданном колонкой «Источник». «Размерность» применяется к безразмерным числовым значениям: они трактуются в выбранной единице и переводятся в метрические; «Авто» — берется как есть."/>
+        <DockPanel Grid.Row="0" Margin="0,0,0,6">
+            <Button x:Name="InfoButton"
+                    DockPanel.Dock="Right"
+                    Content="ⓘ"
+                    Width="28"
+                    Height="26"
+                    FontSize="15"
+                    ToolTipService.ShowDuration="60000"
+                    Click="Info_Click"/>
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="AnalyzeButton" Content="Проверить в модели" Padding="10,3" Click="Analyze_Click"/>
+            </StackPanel>
+        </DockPanel>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
-            <Button Content="Добавить" Padding="10,3" Margin="0,0,6,0" Click="Add_Click"/>
-            <Button Content="Удалить" Padding="10,3" Margin="0,0,6,0" Click="Remove_Click"/>
-            <Button Content="▲" Padding="8,3" Margin="0,0,3,0" Click="RuleUp_Click"/>
-            <Button Content="▼" Padding="8,3" Margin="0,0,12,0" Click="RuleDown_Click"/>
-            <Button x:Name="PickButton" Content="Выбрать из проекта…" Padding="10,3" Margin="0,0,6,0" Click="Pick_Click"/>
-            <Button x:Name="AnalyzeButton" Content="Проверить в модели" Padding="10,3" Click="Analyze_Click"/>
-            <TextBlock Text="Кнопки действуют на таблицу, в которой выбрана строка."
-                       Foreground="#FF909090" FontSize="11.5"
-                       VerticalAlignment="Center" Margin="12,0,0,0"/>
-        </StackPanel>
-
-        <TabControl x:Name="Tabs" Grid.Row="2">
+        <TabControl x:Name="Tabs" Grid.Row="1">
             <TabItem Header="Объем">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="3*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="2*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Style="{StaticResource SectionHeader}" Text="Общие правила (для всех категорий)"/>
+
+                    <DockPanel Grid.Row="0" Margin="0,6,0,3">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="VolumePickButton" Content="Из проекта…" Tag="Volume" Style="{StaticResource MiniButton}" Click="SectionPick_Click"/>
+                            <Button Content="Добавить" Tag="Volume" Style="{StaticResource MiniButton}" Click="SectionAdd_Click"/>
+                            <Button Content="Удалить" Tag="Volume" Style="{StaticResource MiniButton}" Click="SectionRemove_Click"/>
+                            <Button Content="▲" Tag="Volume" Style="{StaticResource MiniButton}" Click="SectionUp_Click"/>
+                            <Button Content="▼" Tag="Volume" Style="{StaticResource MiniButton}" Click="SectionDown_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Общие правила" Style="{StaticResource SectionTitle}"/>
+                    </DockPanel>
                     <DataGrid x:Name="VolumeGrid" Grid.Row="1">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="240"/>
@@ -75,8 +91,20 @@
                             <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock Grid.Row="2" Style="{StaticResource SectionHeader}" Text="Исключения по категориям (только эти правила, без общих и без системного параметра)"/>
-                    <DataGrid x:Name="VolumeCategoryGrid" Grid.Row="3">
+                    <TextBlock Grid.Row="2" Style="{StaticResource LegendText}"
+                               Text="Статусы: ✓ подходит · • найден, но без размерности · ✗ не подходит тип данных · — не найден"/>
+
+                    <DockPanel Grid.Row="3" Margin="0,10,0,3">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="VolumeCatPickButton" Content="Из проекта…" Tag="VolumeCategory" Style="{StaticResource MiniButton}" Click="SectionPick_Click"/>
+                            <Button Content="Добавить" Tag="VolumeCategory" Style="{StaticResource MiniButton}" Click="SectionAdd_Click"/>
+                            <Button Content="Удалить" Tag="VolumeCategory" Style="{StaticResource MiniButton}" Click="SectionRemove_Click"/>
+                            <Button Content="▲" Tag="VolumeCategory" Style="{StaticResource MiniButton}" Click="SectionUp_Click"/>
+                            <Button Content="▼" Tag="VolumeCategory" Style="{StaticResource MiniButton}" Click="SectionDown_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Исключения по категориям" Style="{StaticResource SectionTitle}"/>
+                    </DockPanel>
+                    <DataGrid x:Name="VolumeCategoryGrid" Grid.Row="4">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Категория" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
                             <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="180"/>
@@ -93,9 +121,20 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="3*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="2*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Style="{StaticResource SectionHeader}" Text="Общие правила (для всех категорий)"/>
+
+                    <DockPanel Grid.Row="0" Margin="0,6,0,3">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="AreaPickButton" Content="Из проекта…" Tag="Area" Style="{StaticResource MiniButton}" Click="SectionPick_Click"/>
+                            <Button Content="Добавить" Tag="Area" Style="{StaticResource MiniButton}" Click="SectionAdd_Click"/>
+                            <Button Content="Удалить" Tag="Area" Style="{StaticResource MiniButton}" Click="SectionRemove_Click"/>
+                            <Button Content="▲" Tag="Area" Style="{StaticResource MiniButton}" Click="SectionUp_Click"/>
+                            <Button Content="▼" Tag="Area" Style="{StaticResource MiniButton}" Click="SectionDown_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Общие правила" Style="{StaticResource SectionTitle}"/>
+                    </DockPanel>
                     <DataGrid x:Name="AreaGrid" Grid.Row="1">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="240"/>
@@ -104,8 +143,20 @@
                             <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock Grid.Row="2" Style="{StaticResource SectionHeader}" Text="Исключения по категориям (только эти правила, без общих и без системного параметра)"/>
-                    <DataGrid x:Name="AreaCategoryGrid" Grid.Row="3">
+                    <TextBlock Grid.Row="2" Style="{StaticResource LegendText}"
+                               Text="Статусы: ✓ подходит · • найден, но без размерности · ✗ не подходит тип данных · — не найден"/>
+
+                    <DockPanel Grid.Row="3" Margin="0,10,0,3">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="AreaCatPickButton" Content="Из проекта…" Tag="AreaCategory" Style="{StaticResource MiniButton}" Click="SectionPick_Click"/>
+                            <Button Content="Добавить" Tag="AreaCategory" Style="{StaticResource MiniButton}" Click="SectionAdd_Click"/>
+                            <Button Content="Удалить" Tag="AreaCategory" Style="{StaticResource MiniButton}" Click="SectionRemove_Click"/>
+                            <Button Content="▲" Tag="AreaCategory" Style="{StaticResource MiniButton}" Click="SectionUp_Click"/>
+                            <Button Content="▼" Tag="AreaCategory" Style="{StaticResource MiniButton}" Click="SectionDown_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Исключения по категориям" Style="{StaticResource SectionTitle}"/>
+                    </DockPanel>
+                    <DataGrid x:Name="AreaCategoryGrid" Grid.Row="4">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Категория" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
                             <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="180"/>
@@ -122,9 +173,20 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="3*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="2*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Style="{StaticResource SectionHeader}" Text="Общие правила (для всех категорий)"/>
+
+                    <DockPanel Grid.Row="0" Margin="0,6,0,3">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="LengthPickButton" Content="Из проекта…" Tag="Length" Style="{StaticResource MiniButton}" Click="SectionPick_Click"/>
+                            <Button Content="Добавить" Tag="Length" Style="{StaticResource MiniButton}" Click="SectionAdd_Click"/>
+                            <Button Content="Удалить" Tag="Length" Style="{StaticResource MiniButton}" Click="SectionRemove_Click"/>
+                            <Button Content="▲" Tag="Length" Style="{StaticResource MiniButton}" Click="SectionUp_Click"/>
+                            <Button Content="▼" Tag="Length" Style="{StaticResource MiniButton}" Click="SectionDown_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Общие правила" Style="{StaticResource SectionTitle}"/>
+                    </DockPanel>
                     <DataGrid x:Name="LengthGrid" Grid.Row="1">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="240"/>
@@ -133,8 +195,20 @@
                             <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock Grid.Row="2" Style="{StaticResource SectionHeader}" Text="Исключения по категориям (только эти правила, без общих и без системного параметра)"/>
-                    <DataGrid x:Name="LengthCategoryGrid" Grid.Row="3">
+                    <TextBlock Grid.Row="2" Style="{StaticResource LegendText}"
+                               Text="Статусы: ✓ подходит · • найден, но без размерности · ✗ не подходит тип данных · — не найден"/>
+
+                    <DockPanel Grid.Row="3" Margin="0,10,0,3">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="LengthCatPickButton" Content="Из проекта…" Tag="LengthCategory" Style="{StaticResource MiniButton}" Click="SectionPick_Click"/>
+                            <Button Content="Добавить" Tag="LengthCategory" Style="{StaticResource MiniButton}" Click="SectionAdd_Click"/>
+                            <Button Content="Удалить" Tag="LengthCategory" Style="{StaticResource MiniButton}" Click="SectionRemove_Click"/>
+                            <Button Content="▲" Tag="LengthCategory" Style="{StaticResource MiniButton}" Click="SectionUp_Click"/>
+                            <Button Content="▼" Tag="LengthCategory" Style="{StaticResource MiniButton}" Click="SectionDown_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Исключения по категориям" Style="{StaticResource SectionTitle}"/>
+                    </DockPanel>
+                    <DataGrid x:Name="LengthCategoryGrid" Grid.Row="4">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Категория" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
                             <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="180"/>
@@ -151,9 +225,20 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="3*"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="2*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Style="{StaticResource SectionHeader}" Text="Общие правила (для всех категорий)"/>
+
+                    <DockPanel Grid.Row="0" Margin="0,6,0,3">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="MassPickButton" Content="Из проекта…" Tag="Mass" Style="{StaticResource MiniButton}" Click="SectionPick_Click"/>
+                            <Button Content="Добавить" Tag="Mass" Style="{StaticResource MiniButton}" Click="SectionAdd_Click"/>
+                            <Button Content="Удалить" Tag="Mass" Style="{StaticResource MiniButton}" Click="SectionRemove_Click"/>
+                            <Button Content="▲" Tag="Mass" Style="{StaticResource MiniButton}" Click="SectionUp_Click"/>
+                            <Button Content="▼" Tag="Mass" Style="{StaticResource MiniButton}" Click="SectionDown_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Общие правила" Style="{StaticResource SectionTitle}"/>
+                    </DockPanel>
                     <DataGrid x:Name="MassGrid" Grid.Row="1">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="240"/>
@@ -162,8 +247,20 @@
                             <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
-                    <TextBlock Grid.Row="2" Style="{StaticResource SectionHeader}" Text="Исключения по категориям (только эти правила, без общих и без системного параметра)"/>
-                    <DataGrid x:Name="MassCategoryGrid" Grid.Row="3">
+                    <TextBlock Grid.Row="2" Style="{StaticResource LegendText}"
+                               Text="Статусы: ✓ подходит · • найден, но без размерности · ✗ не подходит тип данных · — не найден"/>
+
+                    <DockPanel Grid.Row="3" Margin="0,10,0,3">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="MassCatPickButton" Content="Из проекта…" Tag="MassCategory" Style="{StaticResource MiniButton}" Click="SectionPick_Click"/>
+                            <Button Content="Добавить" Tag="MassCategory" Style="{StaticResource MiniButton}" Click="SectionAdd_Click"/>
+                            <Button Content="Удалить" Tag="MassCategory" Style="{StaticResource MiniButton}" Click="SectionRemove_Click"/>
+                            <Button Content="▲" Tag="MassCategory" Style="{StaticResource MiniButton}" Click="SectionUp_Click"/>
+                            <Button Content="▼" Tag="MassCategory" Style="{StaticResource MiniButton}" Click="SectionDown_Click"/>
+                        </StackPanel>
+                        <TextBlock Text="Исключения по категориям" Style="{StaticResource SectionTitle}"/>
+                    </DockPanel>
+                    <DataGrid x:Name="MassCategoryGrid" Grid.Row="4">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Категория" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
                             <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="180"/>
@@ -176,14 +273,7 @@
             </TabItem>
         </TabControl>
 
-        <TextBlock Grid.Row="3"
-                   TextWrapping="Wrap"
-                   Foreground="#FF909090"
-                   FontSize="11.5"
-                   Margin="0,4,0,0"
-                   Text="Статусы: ✓ подходит; • найден, но без размерности (значение берется как есть или в заданной размерности); ✗ недопустимый тип данных; — не найден. Проверяются проектные и общие параметры документа; параметры, определенные внутри семейств, проверке недоступны, но при подсчете читаются."/>
-
-        <Grid Grid.Row="4" Margin="0,12,0,0">
+        <Grid Grid.Row="2" Margin="0,12,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
@@ -216,7 +306,7 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="5" Margin="0,14,0,0">
+        <Grid Grid.Row="3" Margin="0,14,0,0">
             <Button Content="По умолчанию"
                     HorizontalAlignment="Left"
                     Padding="14,5"
