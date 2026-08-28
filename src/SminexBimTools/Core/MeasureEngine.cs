@@ -235,6 +235,36 @@ namespace SminexBimTools.Core
                 case StorageType.Double:
                 {
                     double raw = parameter.AsDouble();
+#if REVIT2020 || REVIT2021
+                    // До Revit 2022 нет Definition.GetDataType()/ForgeTypeId —
+                    // тип данных и единицы определяются через классические
+                    // ParameterType и DisplayUnitType (в 2021 они помечены
+                    // устаревшими, но полностью работоспособны).
+#pragma warning disable CS0618
+                    ParameterType dataType = parameter.Definition.ParameterType;
+
+                    if (dataType == ParameterType.Volume)
+                    {
+                        unitLabel = "м³";
+                        return UnitUtils.ConvertFromInternalUnits(raw, DisplayUnitType.DUT_CUBIC_METERS);
+                    }
+                    if (dataType == ParameterType.Area)
+                    {
+                        unitLabel = "м²";
+                        return UnitUtils.ConvertFromInternalUnits(raw, DisplayUnitType.DUT_SQUARE_METERS);
+                    }
+                    if (dataType == ParameterType.Length)
+                    {
+                        unitLabel = "м";
+                        return UnitUtils.ConvertFromInternalUnits(raw, DisplayUnitType.DUT_METERS);
+                    }
+                    if (dataType == ParameterType.Mass)
+                    {
+                        unitLabel = "кг";
+                        return UnitUtils.ConvertFromInternalUnits(raw, DisplayUnitType.DUT_KILOGRAMS_MASS);
+                    }
+#pragma warning restore CS0618
+#else
                     ForgeTypeId dataType = parameter.Definition.GetDataType();
 
                     if (dataType == SpecTypeId.Volume)
@@ -257,7 +287,7 @@ namespace SminexBimTools.Core
                         unitLabel = "кг";
                         return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.Kilograms);
                     }
-
+#endif
                     return raw;
                 }
 

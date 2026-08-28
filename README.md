@@ -1,6 +1,6 @@
 # Sminex BIM Tools
 
-Плагин для Autodesk Revit **2022** и **2024**. Добавляет на ленту вкладку
+Плагин для Autodesk Revit **2020**, **2021**, **2022** и **2024**. Добавляет на ленту вкладку
 **«Sminex BIM Tools»** с инструментами быстрого суммирования параметров
 по выделенным элементам.
 
@@ -81,11 +81,17 @@ scripts/install.ps1             — сборка и установка одни�
 `Nice3point.Revit.Api.*`, поэтому установленный Revit для сборки не нужен.
 
 ```powershell
+dotnet build -c "Release R2020"   # для Revit 2020
+dotnet build -c "Release R2021"   # для Revit 2021
 dotnet build -c "Release R2022"   # для Revit 2022
 dotnet build -c "Release R2024"   # для Revit 2024
 ```
 
-Версия Revit выбирается конфигурацией сборки (`Debug|Release R2022|R2024`).
+Версия Revit выбирается конфигурацией сборки
+(`Debug|Release R2020|R2021|R2022|R2024`). Для Revit 2020 сборка целится
+в .NET Framework 4.7.2, для остальных версий — в 4.8; в Revit 2020/2021
+вместо ForgeTypeId-API используются классические `ParameterType`
+и `DisplayUnitType` (условная компиляция).
 
 ## Установка
 
@@ -93,8 +99,9 @@ dotnet build -c "Release R2024"   # для Revit 2024
 
 ```powershell
 cd scripts
-.\install.ps1                     # Revit 2022 и 2024
-.\install.ps1 -RevitVersions 2024 # только Revit 2024
+.\install.ps1                          # все поддерживаемые версии (2020, 2021, 2022, 2024)
+.\install.ps1 -RevitVersions 2024      # только Revit 2024
+.\install.ps1 -RevitVersions 2020,2021 # только Revit 2020 и 2021
 ```
 
 ### Вручную
@@ -111,5 +118,6 @@ cd scripts
 
 ## CI
 
-GitHub Actions собирает плагин для обеих версий Revit на каждый push;
-готовые DLL можно скачать из артефактов сборки.
+GitHub Actions собирает плагин для всех поддерживаемых версий Revit
+(2020, 2021, 2022, 2024) на каждый push; готовые DLL можно скачать
+из артефактов сборки.

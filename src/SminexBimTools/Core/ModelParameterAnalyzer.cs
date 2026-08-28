@@ -8,7 +8,11 @@ namespace SminexBimTools.Core
     public class ProjectParameterInfo
     {
         public string Name { get; set; }
+#if REVIT2020 || REVIT2021
+        public ParameterType DataType { get; set; }
+#else
         public ForgeTypeId DataType { get; set; }
+#endif
         public bool IsShared { get; set; }
     }
 
@@ -38,7 +42,13 @@ namespace SminexBimTools.Core
                 map[definition.Name] = new ProjectParameterInfo
                 {
                     Name = definition.Name,
+#if REVIT2020 || REVIT2021
+#pragma warning disable CS0618
+                    DataType = definition.ParameterType,
+#pragma warning restore CS0618
+#else
                     DataType = definition.GetDataType(),
+#endif
                     IsShared = parameterElement is SharedParameterElement
                 };
             }
@@ -47,6 +57,21 @@ namespace SminexBimTools.Core
         }
 
         /// <summary>Человекочитаемое имя типа данных параметра.</summary>
+#if REVIT2020 || REVIT2021
+        public static string GetDataTypeLabel(ParameterType dataType)
+        {
+            try
+            {
+#pragma warning disable CS0618
+                return LabelUtils.GetLabelFor(dataType);
+#pragma warning restore CS0618
+            }
+            catch
+            {
+                return dataType.ToString();
+            }
+        }
+#else
         public static string GetDataTypeLabel(ForgeTypeId dataType)
         {
             if (dataType == null)
@@ -61,6 +86,7 @@ namespace SminexBimTools.Core
                 return dataType.TypeId;
             }
         }
+#endif
 
         /// <summary>
         /// Оценивает имя параметра для проверки <paramref name="kind"/>:
@@ -90,12 +116,21 @@ namespace SminexBimTools.Core
             if (!projectParameters.TryGetValue(name, out ProjectParameterInfo info))
                 return "— не найден среди параметров проекта";
 
+#if REVIT2020 || REVIT2021
+            ParameterType dataType = info.DataType;
+            ParameterType expected = ExpectedType(kind);
+            bool typeMatches = expected != ParameterType.Invalid && dataType == expected;
+            bool isNumberLike = dataType == ParameterType.Number || dataType == ParameterType.Integer;
+            bool isText = dataType == ParameterType.Text;
+#else
             ForgeTypeId dataType = info.DataType;
             ForgeTypeId expected = ExpectedSpec(kind);
+            bool typeMatches = expected != null && dataType == expected;
             bool isNumberLike = dataType == SpecTypeId.Number || dataType == SpecTypeId.Int.Integer;
             bool isText = dataType == SpecTypeId.String.Text;
+#endif
 
-            if (expected != null && dataType == expected)
+            if (typeMatches)
                 return "✓ найден: " + GetDataTypeLabel(dataType);
             if (isNumberLike)
                 return "• найден, без размерности — значение будет взято как есть";
@@ -105,6 +140,19 @@ namespace SminexBimTools.Core
             return "✗ тип данных не подходит: " + GetDataTypeLabel(dataType);
         }
 
+#if REVIT2020 || REVIT2021
+        private static ParameterType ExpectedType(MeasureKind kind)
+        {
+            switch (kind)
+            {
+                case MeasureKind.Volume: return ParameterType.Volume;
+                case MeasureKind.Area: return ParameterType.Area;
+                case MeasureKind.Length: return ParameterType.Length;
+                case MeasureKind.Mass: return ParameterType.Mass;
+                default: return ParameterType.Invalid;
+            }
+        }
+#else
         private static ForgeTypeId ExpectedSpec(MeasureKind kind)
         {
             switch (kind)
@@ -116,5 +164,6 @@ namespace SminexBimTools.Core
                 default: return null;
             }
         }
+#endif
     }
 }

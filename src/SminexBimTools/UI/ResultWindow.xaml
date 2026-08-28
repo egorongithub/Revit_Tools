@@ -1,0 +1,81 @@
+<Window x:Class="SminexBimTools.UI.ResultWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sminex BIM Tools"
+        Width="560"
+        MinWidth="460"
+        SizeToContent="Height"
+        MaxHeight="680"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        FontSize="13">
+    <Window.Resources>
+        <!-- Текст, который выглядит как подпись, но выделяется и копируется -->
+        <Style x:Key="SelectableText" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="HeaderText"
+                     Style="{StaticResource SelectableText}"
+                     FontSize="16"
+                     FontWeight="SemiBold"
+                     Foreground="#FF1F4E9E"
+                     VerticalAlignment="Center"/>
+            <Button x:Name="CopyButton"
+                    Grid.Column="1"
+                    Content="Копировать"
+                    MinWidth="110"
+                    Padding="12,4"
+                    Margin="12,0,0,0"
+                    VerticalAlignment="Center"
+                    Click="Copy_Click"/>
+        </Grid>
+
+        <TextBox x:Name="ContentText"
+                 Grid.Row="1"
+                 Style="{StaticResource SelectableText}"
+                 Margin="0,0,0,10"/>
+
+        <Expander x:Name="DetailsExpander"
+                  Grid.Row="2"
+                  Header="Подробности"
+                  Visibility="Collapsed"
+                  Margin="0,0,0,10">
+            <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto" Margin="0,6,0,0">
+                <TextBox x:Name="ExpandedText" Style="{StaticResource SelectableText}"/>
+            </ScrollViewer>
+        </Expander>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="SelectButton"
+                    Content="Выбрать элементы в модели…"
+                    Visibility="Collapsed"
+                    Padding="14,5"
+                    Margin="0,0,10,0"
+                    Click="Select_Click"/>
+            <Button Content="Закрыть"
+                    Padding="18,5"
+                    IsDefault="True"
+                    IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
