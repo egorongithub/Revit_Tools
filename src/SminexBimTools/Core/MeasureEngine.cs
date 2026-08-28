@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using Autodesk.Revit.DB;
 using SminexBimTools.Settings;
 
@@ -34,22 +35,23 @@ namespace SminexBimTools.Core
 
             var result = new SummationResult { TotalElements = elementIds.Count };
 
-            // Правила с заполненной категорией действуют только на «свою» категорию,
-            // причем для нее — эксклюзивно: общие правила и системные параметры
-            // для таких элементов не используются.
-            var generalRules = new List<ParameterRule>();
+            // Общие правила — без категории (строки с категорией в общем списке
+            // игнорируются защитно: после миграции их там быть не должно).
+            var generalRules = settings.GetRules(kind)
+                .Where(rule => rule != null && string.IsNullOrWhiteSpace(rule.Category))
+                .ToList();
+
+            // Исключения: для элементов «своей» категории действуют ТОЛЬКО они —
+            // без общих правил и без системного параметра Revit.
             var categoryRules = new Dictionary<string, List<ParameterRule>>(StringComparer.OrdinalIgnoreCase);
-            foreach (ParameterRule rule in settings.GetRules(kind))
+            foreach (ParameterRule rule in settings.GetCategoryRules(kind))
             {
                 if (rule == null)
                     continue;
 
                 string ruleCategory = rule.Category == null ? null : rule.Category.Trim();
                 if (string.IsNullOrEmpty(ruleCategory))
-                {
-                    generalRules.Add(rule);
                     continue;
-                }
 
                 if (!categoryRules.TryGetValue(ruleCategory, out List<ParameterRule> list))
                 {
@@ -69,7 +71,7 @@ namespace SminexBimTools.Core
 
                 ParameterHit hit;
                 if (categoryRules.TryGetValue(categoryName, out List<ParameterRule> overrides))
-                    hit = Find(element, overrides, kind, settings.SearchOrder, allowSystem: false);
+                    hit = FindRowMajor(element, overrides, settings.SearchOrder);
                 else
                     hit = Find(element, generalRules, kind, settings.SearchOrder, allowSystem: true);
 
@@ -141,6 +143,87 @@ namespace SminexBimTools.Core
             return result;
         }
 
+        /// <summary>
+        /// Поиск по правилам исключения категории: строго сверху вниз,
+        /// строка за строкой. Источник строки задает, где искать: «Экземпляр» —
+        /// только в экземпляре, «Тип» — только в типе, «Авто» — и там и там
+        /// в последовательности общего порядка поиска. Системный параметр
+        /// Revit для исключений не используется никогда.
+        /// </summary>
+        private static ParameterHit FindRowMajor(Element element, IList<ParameterRule> rules, IList<SearchStage> order)
+        {
+            Element typeElement = null;
+            ElementId typeId = element.GetTypeId();
+            if (typeId != null && typeId != ElementId.InvalidElementId)
+                typeElement = element.Document.GetElement(typeId);
+
+            foreach (ParameterRule rule in rules)
+            {
+                if (rule == null)
+                    continue;
+
+                string name = rule.Name == null ? null : rule.Name.Trim();
+                if (string.IsNullOrEmpty(name))
+                    continue;
+
+                switch (rule.Source)
+                {
+                    case ParameterSource.Instance:
+                    {
+                        Parameter parameter = FindByName(element, name);
+                        if (parameter != null)
+                            return new ParameterHit { Parameter = parameter, SourceLabel = "экземпляр", Rule = rule };
+                        break;
+                    }
+
+                    case ParameterSource.Type:
+                    {
+                        Parameter parameter = typeElement != null ? FindByName(typeElement, name) : null;
+                        if (parameter != null)
+                            return new ParameterHit { Parameter = parameter, SourceLabel = "тип", Rule = rule };
+                        break;
+                    }
+
+                    default: // Auto — экземпляр и тип в последовательности общего порядка
+                    {
+                        foreach (SearchStage stage in order)
+                        {
+                            if (stage == SearchStage.Instance)
+                            {
+                                Parameter parameter = FindByName(element, name);
+                                if (parameter != null)
+                                    return new ParameterHit { Parameter = parameter, SourceLabel = "экземпляр", Rule = rule };
+                            }
+                            else if (stage == SearchStage.Type && typeElement != null)
+                            {
+                                Parameter parameter = FindByName(typeElement, name);
+                                if (parameter != null)
+                                    return new ParameterHit { Parameter = parameter, SourceLabel = "тип", Rule = rule };
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Первый параметр элемента с данным именем и значением
+        /// (одноименных параметров может быть несколько).
+        /// </summary>
+        private static Parameter FindByName(Element target, string name)
+        {
+            foreach (Parameter parameter in target.GetParameters(name))
+            {
+                if (parameter != null && parameter.HasValue)
+                    return parameter;
+            }
+
+            return null;
+        }
+
         private static ParameterHit Find(Element element, IList<ParameterRule> rules, MeasureKind kind, IList<SearchStage> order, bool allowSystem)
         {
             Element typeElement = null;
@@ -203,16 +286,11 @@ namespace SminexBimTools.Core
                 if (string.IsNullOrEmpty(name))
                     continue;
 
-                // У элемента может быть несколько параметров с одинаковым именем
-                // (например, общий параметр и параметр семейства) — перебираем
-                // все одноименные и берем первый со значением.
-                foreach (Parameter parameter in target.GetParameters(name))
+                Parameter parameter = FindByName(target, name);
+                if (parameter != null)
                 {
-                    if (parameter != null && parameter.HasValue)
-                    {
-                        matchedRule = rule;
-                        return parameter;
-                    }
+                    matchedRule = rule;
+                    return parameter;
                 }
             }
 

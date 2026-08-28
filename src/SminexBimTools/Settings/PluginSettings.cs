@@ -26,6 +26,23 @@ namespace SminexBimTools.Settings
         /// <summary>Правила для проверки «Масса».</summary>
         public List<ParameterRule> MassRules { get; set; } = new List<ParameterRule>();
 
+        // Исключения по категориям: правила с заполненным Category.
+        // Для элементов «своей» категории действуют только они — без общих
+        // правил и без системного параметра Revit. Проверяются строго
+        // сверху вниз (строка за строкой).
+
+        /// <summary>Исключения по категориям для «Объема».</summary>
+        public List<ParameterRule> VolumeCategoryRules { get; set; } = new List<ParameterRule>();
+
+        /// <summary>Исключения по категориям для «Площади».</summary>
+        public List<ParameterRule> AreaCategoryRules { get; set; } = new List<ParameterRule>();
+
+        /// <summary>Исключения по категориям для «Длины».</summary>
+        public List<ParameterRule> LengthCategoryRules { get; set; } = new List<ParameterRule>();
+
+        /// <summary>Исключения по категориям для «Массы».</summary>
+        public List<ParameterRule> MassCategoryRules { get; set; } = new List<ParameterRule>();
+
         /// <summary>
         /// Версия схемы настроек — для дозаполнения новых правил
         /// при обновлении плагина поверх старого файла настроек.
@@ -34,7 +51,7 @@ namespace SminexBimTools.Settings
         public int Version { get; set; }
 
         /// <summary>Текущая версия схемы настроек.</summary>
-        public const int CurrentVersion = 2;
+        public const int CurrentVersion = 3;
 
         /// <summary>
         /// Общий порядок поиска для правил с источником «Авто» и системного шага.
@@ -83,18 +100,16 @@ namespace SminexBimTools.Settings
 
         public static PluginSettings CreateDefault()
         {
-            var settings = new PluginSettings
+            return new PluginSettings
             {
                 Version = CurrentVersion,
                 VolumeRules = MakeRules("Объем", "Volume", "ADSK_Объем"),
                 AreaRules = MakeRules("Площадь", "Area", "ADSK_Площадь"),
                 LengthRules = MakeRules("Длина", "Length", "ADSK_Длина"),
                 MassRules = DefaultMassRules(),
+                AreaCategoryRules = DefaultAreaCategoryRules(),
                 SearchOrder = DefaultSearchOrder()
             };
-
-            settings.AreaRules.AddRange(DefaultAreaCategoryRules());
-            return settings;
         }
 
         /// <summary>Правила «Массы» по умолчанию: SMNX_Масса из экземпляра.</summary>
@@ -134,6 +149,18 @@ namespace SminexBimTools.Settings
                 case MeasureKind.Area: return AreaRules ?? new List<ParameterRule>();
                 case MeasureKind.Length: return LengthRules ?? new List<ParameterRule>();
                 case MeasureKind.Mass: return MassRules ?? new List<ParameterRule>();
+                default: return new List<ParameterRule>();
+            }
+        }
+
+        public List<ParameterRule> GetCategoryRules(MeasureKind kind)
+        {
+            switch (kind)
+            {
+                case MeasureKind.Volume: return VolumeCategoryRules ?? new List<ParameterRule>();
+                case MeasureKind.Area: return AreaCategoryRules ?? new List<ParameterRule>();
+                case MeasureKind.Length: return LengthCategoryRules ?? new List<ParameterRule>();
+                case MeasureKind.Mass: return MassCategoryRules ?? new List<ParameterRule>();
                 default: return new List<ParameterRule>();
             }
         }
