@@ -32,7 +32,31 @@ namespace SminexBimTools.Core
                 return CountElements(document, elementIds);
 
             var result = new SummationResult { TotalElements = elementIds.Count };
-            IList<ParameterRule> rules = settings.GetRules(kind);
+
+            // Правила с заполненной категорией действуют только на «свою» категорию,
+            // причем для нее — эксклюзивно: общие правила и системные параметры
+            // для таких элементов не используются.
+            var generalRules = new List<ParameterRule>();
+            var categoryRules = new Dictionary<string, List<ParameterRule>>(StringComparer.OrdinalIgnoreCase);
+            foreach (ParameterRule rule in settings.GetRules(kind))
+            {
+                if (rule == null)
+                    continue;
+
+                string ruleCategory = rule.Category == null ? null : rule.Category.Trim();
+                if (string.IsNullOrEmpty(ruleCategory))
+                {
+                    generalRules.Add(rule);
+                    continue;
+                }
+
+                if (!categoryRules.TryGetValue(ruleCategory, out List<ParameterRule> list))
+                {
+                    list = new List<ParameterRule>();
+                    categoryRules[ruleCategory] = list;
+                }
+                list.Add(rule);
+            }
 
             foreach (ElementId id in elementIds)
             {
@@ -40,7 +64,13 @@ namespace SminexBimTools.Core
                 if (element == null)
                     continue;
 
-                ParameterHit hit = Find(element, rules, kind, settings.SearchOrder);
+                string categoryName = element.Category != null ? element.Category.Name : "Без категории";
+
+                ParameterHit hit;
+                if (categoryRules.TryGetValue(categoryName, out List<ParameterRule> overrides))
+                    hit = Find(element, overrides, kind, settings.SearchOrder, allowSystem: false);
+                else
+                    hit = Find(element, generalRules, kind, settings.SearchOrder, allowSystem: true);
 
                 double? value = null;
                 string unitLabel = null; // null => значение без размерности
@@ -71,8 +101,6 @@ namespace SminexBimTools.Core
                 result.Counted++;
                 result.Total += value.Value;
                 Accumulate(result.ByParameter, groupKey, value.Value, element.Id);
-
-                string categoryName = element.Category != null ? element.Category.Name : "Без категории";
                 Accumulate(result.Categories, categoryName, value.Value, element.Id);
             }
 
@@ -112,7 +140,7 @@ namespace SminexBimTools.Core
             return result;
         }
 
-        private static ParameterHit Find(Element element, IList<ParameterRule> rules, MeasureKind kind, IList<SearchStage> order)
+        private static ParameterHit Find(Element element, IList<ParameterRule> rules, MeasureKind kind, IList<SearchStage> order, bool allowSystem)
         {
             Element typeElement = null;
             ElementId typeId = element.GetTypeId();
@@ -143,6 +171,8 @@ namespace SminexBimTools.Core
 
                     case SearchStage.System:
                     {
+                        if (!allowSystem)
+                            break;
                         BuiltInParameter builtIn = kind.FallbackBuiltInParameter();
                         if (builtIn == BuiltInParameter.INVALID)
                             break;
@@ -221,6 +251,11 @@ namespace SminexBimTools.Core
                     {
                         unitLabel = "м";
                         return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.Meters);
+                    }
+                    if (dataType == SpecTypeId.Mass)
+                    {
+                        unitLabel = "кг";
+                        return UnitUtils.ConvertFromInternalUnits(raw, UnitTypeId.Kilograms);
                     }
 
                     return raw;

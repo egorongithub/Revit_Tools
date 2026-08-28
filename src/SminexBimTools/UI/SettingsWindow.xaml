@@ -39,7 +39,7 @@
                    TextWrapping="Wrap"
                    Foreground="#FF606060"
                    Margin="0,0,0,10"
-                   Text="Правила проверяются сверху вниз — используется первый найденный параметр со значением. Источник «Авто» ищется по общему порядку поиска; явный источник («Экземпляр»/«Тип») — только на своем шаге. «Размерность» применяется к безразмерным числовым параметрам: значение трактуется в выбранной единице и переводится в м/м²/м³; «Авто» — берется как есть."/>
+                   Text="Правила проверяются сверху вниз — используется первый найденный параметр со значением. Источник «Авто» ищется по общему порядку поиска; явный источник («Экземпляр»/«Тип») — только на своем шаге. «Размерность» применяется к безразмерным числовым параметрам: значение трактуется в выбранной единице и переводится в метрические; «Авто» — берется как есть. «Категория»: пусто — правило общее; если указана категория, то для ее элементов действуют ТОЛЬКО правила этой категории (без общих и без системных параметров)."/>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,6">
             <Button Content="Добавить" Padding="10,3" Margin="0,0,6,0" Click="Add_Click"/>
@@ -54,9 +54,10 @@
             <TabItem Header="Объем">
                 <DataGrid x:Name="VolumeGrid">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
-                        <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="120"/>
+                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="190"/>
+                        <DataGridTextColumn Header="Категория (пусто — все)" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="210"/>
+                        <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="105"/>
+                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="105"/>
                         <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
@@ -64,9 +65,10 @@
             <TabItem Header="Площадь">
                 <DataGrid x:Name="AreaGrid">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
-                        <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="120"/>
+                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="190"/>
+                        <DataGridTextColumn Header="Категория (пусто — все)" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="210"/>
+                        <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="105"/>
+                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="105"/>
                         <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
@@ -74,9 +76,21 @@
             <TabItem Header="Длина">
                 <DataGrid x:Name="LengthGrid">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="220"/>
-                        <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="110"/>
-                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="120"/>
+                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="190"/>
+                        <DataGridTextColumn Header="Категория (пусто — все)" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="210"/>
+                        <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="105"/>
+                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="105"/>
+                        <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+            <TabItem Header="Масса">
+                <DataGrid x:Name="MassGrid">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Параметр" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="190"/>
+                        <DataGridTextColumn Header="Категория (пусто — все)" Binding="{Binding Category, UpdateSourceTrigger=PropertyChanged}" Width="210"/>
+                        <DataGridComboBoxColumn Header="Источник" SelectedItemBinding="{Binding SourceLabel, UpdateSourceTrigger=PropertyChanged}" Width="105"/>
+                        <DataGridComboBoxColumn Header="Размерность" SelectedItemBinding="{Binding UnitLabel, UpdateSourceTrigger=PropertyChanged}" Width="105"/>
                         <DataGridTextColumn Header="Статус в модели" Binding="{Binding Status}" IsReadOnly="True" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>

@@ -31,6 +31,7 @@ namespace SminexBimTools.UI
         private readonly ObservableCollection<RuleVm> _volumeRules = new ObservableCollection<RuleVm>();
         private readonly ObservableCollection<RuleVm> _areaRules = new ObservableCollection<RuleVm>();
         private readonly ObservableCollection<RuleVm> _lengthRules = new ObservableCollection<RuleVm>();
+        private readonly ObservableCollection<RuleVm> _massRules = new ObservableCollection<RuleVm>();
 
         public PluginSettings Settings { get; private set; }
 
@@ -47,13 +48,15 @@ namespace SminexBimTools.UI
             VolumeGrid.ItemsSource = _volumeRules;
             AreaGrid.ItemsSource = _areaRules;
             LengthGrid.ItemsSource = _lengthRules;
+            MassGrid.ItemsSource = _massRules;
 
             foreach (DataGrid grid in AllGrids())
-                ((DataGridComboBoxColumn)grid.Columns[1]).ItemsSource = SourceLabels;
+                ((DataGridComboBoxColumn)grid.Columns[2]).ItemsSource = SourceLabels;
 
-            ((DataGridComboBoxColumn)VolumeGrid.Columns[2]).ItemsSource = new[] { "Авто", "мм³", "л", "м³" };
-            ((DataGridComboBoxColumn)AreaGrid.Columns[2]).ItemsSource = new[] { "Авто", "мм²", "см²", "м²" };
-            ((DataGridComboBoxColumn)LengthGrid.Columns[2]).ItemsSource = new[] { "Авто", "мм", "см", "м" };
+            ((DataGridComboBoxColumn)VolumeGrid.Columns[3]).ItemsSource = new[] { "Авто", "мм³", "л", "м³" };
+            ((DataGridComboBoxColumn)AreaGrid.Columns[3]).ItemsSource = new[] { "Авто", "мм²", "см²", "м²" };
+            ((DataGridComboBoxColumn)LengthGrid.Columns[3]).ItemsSource = new[] { "Авто", "мм", "см", "м" };
+            ((DataGridComboBoxColumn)MassGrid.Columns[3]).ItemsSource = new[] { "Авто", "г", "кг", "т" };
 
             if (_document == null)
             {
@@ -72,6 +75,7 @@ namespace SminexBimTools.UI
             FillRules(_volumeRules, settings.VolumeRules);
             FillRules(_areaRules, settings.AreaRules);
             FillRules(_lengthRules, settings.LengthRules);
+            FillRules(_massRules, settings.MassRules);
 
             OrderList.Items.Clear();
             foreach (SearchStage stage in settings.SearchOrder)
@@ -91,7 +95,7 @@ namespace SminexBimTools.UI
             foreach (ParameterRule rule in rules)
             {
                 if (rule != null)
-                    target.Add(new RuleVm(rule.Name, rule.Source, rule.Unit));
+                    target.Add(new RuleVm(rule.Name, rule.Source, rule.Unit) { Category = rule.Category ?? string.Empty });
             }
         }
 
@@ -105,9 +109,11 @@ namespace SminexBimTools.UI
 
             var settings = new PluginSettings
             {
+                Version = PluginSettings.CurrentVersion,
                 VolumeRules = CollectRules(_volumeRules),
                 AreaRules = CollectRules(_areaRules),
                 LengthRules = CollectRules(_lengthRules),
+                MassRules = CollectRules(_massRules),
                 SearchOrder = CollectOrder(),
                 RoundUp = RoundUpCheck.IsChecked == true,
                 GroupByCategory = GroupCategoryCheck.IsChecked == true,
@@ -137,7 +143,11 @@ namespace SminexBimTools.UI
         {
             return rules
                 .Where(vm => !string.IsNullOrWhiteSpace(vm.Name))
-                .Select(vm => new ParameterRule(vm.Name.Trim(), vm.Source) { Unit = vm.Unit })
+                .Select(vm => new ParameterRule(vm.Name.Trim(), vm.Source)
+                {
+                    Unit = vm.Unit,
+                    Category = string.IsNullOrWhiteSpace(vm.Category) ? null : vm.Category.Trim()
+                })
                 .ToList();
         }
 
@@ -172,7 +182,8 @@ namespace SminexBimTools.UI
             {
                 case 0: return VolumeGrid;
                 case 1: return AreaGrid;
-                default: return LengthGrid;
+                case 2: return LengthGrid;
+                default: return MassGrid;
             }
         }
 
@@ -182,7 +193,8 @@ namespace SminexBimTools.UI
             {
                 case 0: return _volumeRules;
                 case 1: return _areaRules;
-                default: return _lengthRules;
+                case 2: return _lengthRules;
+                default: return _massRules;
             }
         }
 
@@ -192,7 +204,8 @@ namespace SminexBimTools.UI
             {
                 case 0: return MeasureKind.Volume;
                 case 1: return MeasureKind.Area;
-                default: return MeasureKind.Length;
+                case 2: return MeasureKind.Length;
+                default: return MeasureKind.Mass;
             }
         }
 
@@ -201,6 +214,7 @@ namespace SminexBimTools.UI
             yield return VolumeGrid;
             yield return AreaGrid;
             yield return LengthGrid;
+            yield return MassGrid;
         }
 
         private void Add_Click(object sender, RoutedEventArgs e)
@@ -283,6 +297,7 @@ namespace SminexBimTools.UI
             EvaluateRules(_volumeRules, MeasureKind.Volume, map);
             EvaluateRules(_areaRules, MeasureKind.Area, map);
             EvaluateRules(_lengthRules, MeasureKind.Length, map);
+            EvaluateRules(_massRules, MeasureKind.Mass, map);
         }
 
         private static void EvaluateRules(ObservableCollection<RuleVm> rules, MeasureKind kind, Dictionary<string, ProjectParameterInfo> map)
@@ -325,6 +340,7 @@ namespace SminexBimTools.UI
     public class RuleVm : INotifyPropertyChanged
     {
         private string _name;
+        private string _category = string.Empty;
         private string _sourceLabel;
         private string _unitLabel;
         private string _status;
@@ -335,6 +351,12 @@ namespace SminexBimTools.UI
             _sourceLabel = ToLabel(source);
             _unitLabel = RawUnits.Label(unit);
             _status = string.Empty;
+        }
+
+        public string Category
+        {
+            get { return _category; }
+            set { _category = value ?? string.Empty; OnPropertyChanged(nameof(Category)); }
         }
 
         public string Name

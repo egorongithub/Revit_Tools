@@ -41,7 +41,7 @@ namespace SminexBimTools.Commands
                 PluginSettings settings = SettingsManager.Load();
                 Document doc = uidoc.Document;
 
-                var kinds = new[] { MeasureKind.Volume, MeasureKind.Area, MeasureKind.Length, MeasureKind.Count };
+                var kinds = new[] { MeasureKind.Volume, MeasureKind.Area, MeasureKind.Length, MeasureKind.Mass, MeasureKind.Count };
                 var content = new StringBuilder();
                 var expanded = new StringBuilder();
 

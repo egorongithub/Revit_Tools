@@ -38,7 +38,10 @@ namespace SminexBimTools.Settings
         SquareMeters,
         CubicMillimeters,
         Liters,
-        CubicMeters
+        CubicMeters,
+        Grams,
+        Kilograms,
+        Tonnes
     }
 
     /// <summary>Метки и коэффициенты пересчета безразмерных значений в м/м²/м³.</summary>
@@ -57,6 +60,9 @@ namespace SminexBimTools.Settings
                 case RawUnit.CubicMillimeters: return "мм³";
                 case RawUnit.Liters: return "л";
                 case RawUnit.CubicMeters: return "м³";
+                case RawUnit.Grams: return "г";
+                case RawUnit.Kilograms: return "кг";
+                case RawUnit.Tonnes: return "т";
                 default: return "Авто";
             }
         }
@@ -74,11 +80,14 @@ namespace SminexBimTools.Settings
                 case "мм³": return RawUnit.CubicMillimeters;
                 case "л": return RawUnit.Liters;
                 case "м³": return RawUnit.CubicMeters;
+                case "г": return RawUnit.Grams;
+                case "кг": return RawUnit.Kilograms;
+                case "т": return RawUnit.Tonnes;
                 default: return RawUnit.Auto;
             }
         }
 
-        /// <summary>Коэффициент пересчета значения в итоговую единицу (м, м², м³).</summary>
+        /// <summary>Коэффициент пересчета значения в итоговую единицу (м, м², м³, кг).</summary>
         public static double Factor(RawUnit unit)
         {
             switch (unit)
@@ -89,19 +98,30 @@ namespace SminexBimTools.Settings
                 case RawUnit.SquareCentimeters: return 1e-4;
                 case RawUnit.CubicMillimeters: return 1e-9;
                 case RawUnit.Liters: return 0.001;
-                default: return 1.0; // м, м², м³, Авто
+                case RawUnit.Grams: return 0.001;
+                case RawUnit.Tonnes: return 1000.0;
+                default: return 1.0; // м, м², м³, кг, Авто
             }
         }
     }
 
     /// <summary>
     /// Правило поиска: имя параметра, место, откуда его разрешено читать,
-    /// и единица для трактовки безразмерных значений.
+    /// и единица для трактовки безразмерных значений. Правило может быть
+    /// ограничено одной категорией: тогда для элементов этой категории
+    /// используются ТОЛЬКО такие правила (без общих и без системных).
     /// </summary>
     public class ParameterRule
     {
         [XmlAttribute]
         public string Name { get; set; }
+
+        /// <summary>
+        /// Имя категории Revit, для которой действует правило.
+        /// Пусто — правило общее (для всех категорий без своих правил).
+        /// </summary>
+        [XmlAttribute]
+        public string Category { get; set; }
 
         [XmlAttribute]
         public ParameterSource Source { get; set; } = ParameterSource.Auto;

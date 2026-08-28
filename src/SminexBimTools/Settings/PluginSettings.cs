@@ -23,16 +23,37 @@ namespace SminexBimTools.Settings
         /// <summary>Правила для проверки «Длина».</summary>
         public List<ParameterRule> LengthRules { get; set; } = new List<ParameterRule>();
 
+        /// <summary>Правила для проверки «Масса».</summary>
+        public List<ParameterRule> MassRules { get; set; } = new List<ParameterRule>();
+
+        /// <summary>
+        /// Версия схемы настроек — для дозаполнения новых правил
+        /// при обновлении плагина поверх старого файла настроек.
+        /// </summary>
+        [XmlAttribute]
+        public int Version { get; set; }
+
+        /// <summary>Текущая версия схемы настроек.</summary>
+        public const int CurrentVersion = 2;
+
         /// <summary>
         /// Общий порядок поиска для правил с источником «Авто» и системного шага.
         /// По умолчанию: системные → экземпляр → тип.
+        /// ВАЖНО: инициализатор обязан быть пустым — XmlSerializer при чтении
+        /// не заменяет заполненные списки, а дописывает в них, из-за чего
+        /// сохранённый порядок «портился» и сбрасывался на умолчание.
         /// </summary>
-        public List<SearchStage> SearchOrder { get; set; } = new List<SearchStage>
+        public List<SearchStage> SearchOrder { get; set; } = new List<SearchStage>();
+
+        public static List<SearchStage> DefaultSearchOrder()
         {
-            SearchStage.System,
-            SearchStage.Instance,
-            SearchStage.Type
-        };
+            return new List<SearchStage>
+            {
+                SearchStage.System,
+                SearchStage.Instance,
+                SearchStage.Type
+            };
+        }
 
         /// <summary>Число знаков после запятой в результатах.</summary>
         public int DecimalPlaces { get; set; } = 3;
@@ -62,11 +83,46 @@ namespace SminexBimTools.Settings
 
         public static PluginSettings CreateDefault()
         {
-            return new PluginSettings
+            var settings = new PluginSettings
             {
+                Version = CurrentVersion,
                 VolumeRules = MakeRules("Объем", "Volume", "ADSK_Объем"),
                 AreaRules = MakeRules("Площадь", "Area", "ADSK_Площадь"),
-                LengthRules = MakeRules("Длина", "Length", "ADSK_Длина")
+                LengthRules = MakeRules("Длина", "Length", "ADSK_Длина"),
+                MassRules = DefaultMassRules(),
+                SearchOrder = DefaultSearchOrder()
+            };
+
+            settings.AreaRules.AddRange(DefaultAreaCategoryRules());
+            return settings;
+        }
+
+        /// <summary>Правила «Массы» по умолчанию: SMNX_Масса из экземпляра.</summary>
+        public static List<ParameterRule> DefaultMassRules()
+        {
+            return new List<ParameterRule>
+            {
+                new ParameterRule("SMNX_Масса", ParameterSource.Instance)
+            };
+        }
+
+        /// <summary>
+        /// Преднастроенные исключения по категориям для «Площади»:
+        /// соединительные детали и изоляция воздуховодов всегда считаются
+        /// из SMNX_Площадь экземпляра (системная площадь не используется).
+        /// </summary>
+        public static List<ParameterRule> DefaultAreaCategoryRules()
+        {
+            return new List<ParameterRule>
+            {
+                new ParameterRule("SMNX_Площадь", ParameterSource.Instance)
+                {
+                    Category = "Соединительные детали воздуховодов"
+                },
+                new ParameterRule("SMNX_Площадь", ParameterSource.Instance)
+                {
+                    Category = "Материалы изоляции воздуховодов"
+                }
             };
         }
 
@@ -77,6 +133,7 @@ namespace SminexBimTools.Settings
                 case MeasureKind.Volume: return VolumeRules ?? new List<ParameterRule>();
                 case MeasureKind.Area: return AreaRules ?? new List<ParameterRule>();
                 case MeasureKind.Length: return LengthRules ?? new List<ParameterRule>();
+                case MeasureKind.Mass: return MassRules ?? new List<ParameterRule>();
                 default: return new List<ParameterRule>();
             }
         }

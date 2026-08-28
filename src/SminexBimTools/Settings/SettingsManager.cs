@@ -59,6 +59,7 @@ namespace SminexBimTools.Settings
             settings.VolumeRules = settings.VolumeRules ?? new List<ParameterRule>();
             settings.AreaRules = settings.AreaRules ?? new List<ParameterRule>();
             settings.LengthRules = settings.LengthRules ?? new List<ParameterRule>();
+            settings.MassRules = settings.MassRules ?? new List<ParameterRule>();
             settings.DecimalPlaces = Math.Max(0, Math.Min(6, settings.DecimalPlaces));
 
             // Порядок поиска должен содержать каждый из трех шагов ровно один раз.
@@ -70,16 +71,38 @@ namespace SminexBimTools.Settings
                 && order.Contains(SearchStage.Instance)
                 && order.Contains(SearchStage.System);
             if (!orderValid)
-            {
-                settings.SearchOrder = new List<SearchStage>
-                {
-                    SearchStage.System,
-                    SearchStage.Instance,
-                    SearchStage.Type
-                };
-            }
+                settings.SearchOrder = PluginSettings.DefaultSearchOrder();
+
+            MigrateToCurrentVersion(settings);
 
             return settings;
+        }
+
+        /// <summary>
+        /// Однократно дозаполняет настройки, сохранённые старой версией плагина,
+        /// новыми правилами по умолчанию (масса, исключения по категориям).
+        /// Выполняется только при повышении версии схемы, поэтому правила,
+        /// удалённые пользователем позже, повторно не добавляются.
+        /// </summary>
+        private static void MigrateToCurrentVersion(PluginSettings settings)
+        {
+            if (settings.Version >= PluginSettings.CurrentVersion)
+                return;
+
+            if (settings.MassRules.Count == 0)
+                settings.MassRules.AddRange(PluginSettings.DefaultMassRules());
+
+            foreach (ParameterRule candidate in PluginSettings.DefaultAreaCategoryRules())
+            {
+                bool exists = settings.AreaRules.Any(rule =>
+                    rule != null
+                    && string.Equals((rule.Category ?? string.Empty).Trim(), candidate.Category, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals((rule.Name ?? string.Empty).Trim(), candidate.Name, StringComparison.OrdinalIgnoreCase));
+                if (!exists)
+                    settings.AreaRules.Add(candidate);
+            }
+
+            settings.Version = PluginSettings.CurrentVersion;
         }
     }
 }

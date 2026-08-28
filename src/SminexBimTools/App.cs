@@ -53,6 +53,14 @@ namespace SminexBimTools
                 typeof(DocumentRequiredAvailability));
 
             AddButton(sumPanel, assemblyPath,
+                "SBT_Mass", "Масса", typeof(MassCommand), "Mass",
+                "Сумма масс выделенных элементов",
+                "Суммирует значения параметра массы (по умолчанию SMNX_Масса из " +
+                "экземпляра; настраивается) по всем выделенным элементам и выводит " +
+                "результат в килограммах.",
+                typeof(DocumentRequiredAvailability));
+
+            AddButton(sumPanel, assemblyPath,
                 "SBT_Count", "Количество", typeof(CountCommand), "Count",
                 "Количество выделенных элементов",
                 "Показывает число выделенных элементов с разбивкой по категориям.",

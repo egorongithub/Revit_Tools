@@ -112,6 +112,7 @@ namespace SminexBimTools.Core
                 case MeasureKind.Volume: return SpecTypeId.Volume;
                 case MeasureKind.Area: return SpecTypeId.Area;
                 case MeasureKind.Length: return SpecTypeId.Length;
+                case MeasureKind.Mass: return SpecTypeId.Mass;
                 default: return null;
             }
         }
