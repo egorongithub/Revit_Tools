@@ -73,7 +73,7 @@ namespace SminexBimTools.Core
                 if (categoryRules.TryGetValue(categoryName, out List<ParameterRule> overrides))
                     hit = FindRowMajor(element, overrides, settings.SearchOrder);
                 else
-                    hit = Find(element, generalRules, kind, settings.SearchOrder, allowSystem: true);
+                    hit = Find(element, generalRules, settings.SearchOrder);
 
                 double? value = null;
                 string unitLabel = null; // null => значение без размерности
@@ -147,8 +147,7 @@ namespace SminexBimTools.Core
         /// Поиск по правилам исключения категории: строго сверху вниз,
         /// строка за строкой. Источник строки задает, где искать: «Экземпляр» —
         /// только в экземпляре, «Тип» — только в типе, «Авто» — и там и там
-        /// в последовательности общего порядка поиска. Системный параметр
-        /// Revit для исключений не используется никогда.
+        /// в последовательности общего порядка поиска.
         /// </summary>
         private static ParameterHit FindRowMajor(Element element, IList<ParameterRule> rules, IList<SearchStage> order)
         {
@@ -172,7 +171,7 @@ namespace SminexBimTools.Core
                     {
                         Parameter parameter = FindByName(element, name);
                         if (parameter != null)
-                            return new ParameterHit { Parameter = parameter, SourceLabel = "экземпляр", Rule = rule };
+                            return MakeHit(parameter, "экземпляр", rule);
                         break;
                     }
 
@@ -180,7 +179,7 @@ namespace SminexBimTools.Core
                     {
                         Parameter parameter = typeElement != null ? FindByName(typeElement, name) : null;
                         if (parameter != null)
-                            return new ParameterHit { Parameter = parameter, SourceLabel = "тип", Rule = rule };
+                            return MakeHit(parameter, "тип", rule);
                         break;
                     }
 
@@ -192,13 +191,13 @@ namespace SminexBimTools.Core
                             {
                                 Parameter parameter = FindByName(element, name);
                                 if (parameter != null)
-                                    return new ParameterHit { Parameter = parameter, SourceLabel = "экземпляр", Rule = rule };
+                                    return MakeHit(parameter, "экземпляр", rule);
                             }
                             else if (stage == SearchStage.Type && typeElement != null)
                             {
                                 Parameter parameter = FindByName(typeElement, name);
                                 if (parameter != null)
-                                    return new ParameterHit { Parameter = parameter, SourceLabel = "тип", Rule = rule };
+                                    return MakeHit(parameter, "тип", rule);
                             }
                         }
                         break;
@@ -224,7 +223,7 @@ namespace SminexBimTools.Core
             return null;
         }
 
-        private static ParameterHit Find(Element element, IList<ParameterRule> rules, MeasureKind kind, IList<SearchStage> order, bool allowSystem)
+        private static ParameterHit Find(Element element, IList<ParameterRule> rules, IList<SearchStage> order)
         {
             Element typeElement = null;
             ElementId typeId = element.GetTypeId();
@@ -239,7 +238,7 @@ namespace SminexBimTools.Core
                     {
                         Parameter parameter = FindByRules(element, rules, ParameterSource.Instance, out ParameterRule rule);
                         if (parameter != null)
-                            return new ParameterHit { Parameter = parameter, SourceLabel = "экземпляр", Rule = rule };
+                            return MakeHit(parameter, "экземпляр", rule);
                         break;
                     }
 
@@ -249,26 +248,34 @@ namespace SminexBimTools.Core
                             break;
                         Parameter parameter = FindByRules(typeElement, rules, ParameterSource.Type, out ParameterRule rule);
                         if (parameter != null)
-                            return new ParameterHit { Parameter = parameter, SourceLabel = "тип", Rule = rule };
+                            return MakeHit(parameter, "тип", rule);
                         break;
                     }
 
-                    case SearchStage.System:
-                    {
-                        if (!allowSystem)
-                            break;
-                        BuiltInParameter builtIn = kind.FallbackBuiltInParameter();
-                        if (builtIn == BuiltInParameter.INVALID)
-                            break;
-                        Parameter parameter = element.get_Parameter(builtIn);
-                        if (parameter != null && parameter.HasValue)
-                            return new ParameterHit { Parameter = parameter, SourceLabel = "системный", Rule = null };
-                        break;
-                    }
+                    // Прочие шаги (например, System из старых файлов настроек)
+                    // пропускаются: системные параметры читаются только по имени.
                 }
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Встроенные параметры Revit подписываются «системный», чтобы
+        /// в результатах было видно происхождение значения.
+        /// </summary>
+        private static ParameterHit MakeHit(Parameter parameter, string locationLabel, ParameterRule rule)
+        {
+            var internalDefinition = parameter.Definition as InternalDefinition;
+            bool isBuiltIn = internalDefinition != null
+                && internalDefinition.BuiltInParameter != BuiltInParameter.INVALID;
+
+            return new ParameterHit
+            {
+                Parameter = parameter,
+                SourceLabel = isBuiltIn ? "системный" : locationLabel,
+                Rule = rule
+            };
         }
 
         private static Parameter FindByRules(Element target, IList<ParameterRule> rules, ParameterSource stageSource, out ParameterRule matchedRule)

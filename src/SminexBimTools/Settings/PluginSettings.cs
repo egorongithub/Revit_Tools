@@ -51,11 +51,13 @@ namespace SminexBimTools.Settings
         public int Version { get; set; }
 
         /// <summary>Текущая версия схемы настроек.</summary>
-        public const int CurrentVersion = 3;
+        public const int CurrentVersion = 4;
 
         /// <summary>
-        /// Общий порядок поиска для правил с источником «Авто» и системного шага.
-        /// По умолчанию: системные → экземпляр → тип.
+        /// Общий порядок поиска для правил с источником «Авто»:
+        /// экземпляр/тип. Скрытого системного шага больше нет — системные
+        /// параметры Revit читаются как обычные, по имени в правилах
+        /// (SearchStage.System оставлен в enum только для чтения старых файлов).
         /// ВАЖНО: инициализатор обязан быть пустым — XmlSerializer при чтении
         /// не заменяет заполненные списки, а дописывает в них, из-за чего
         /// сохранённый порядок «портился» и сбрасывался на умолчание.
@@ -66,7 +68,6 @@ namespace SminexBimTools.Settings
         {
             return new List<SearchStage>
             {
-                SearchStage.System,
                 SearchStage.Instance,
                 SearchStage.Type
             };

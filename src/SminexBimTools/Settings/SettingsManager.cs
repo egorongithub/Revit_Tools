@@ -66,16 +66,13 @@ namespace SminexBimTools.Settings
             settings.MassCategoryRules = settings.MassCategoryRules ?? new List<ParameterRule>();
             settings.DecimalPlaces = Math.Max(0, Math.Min(6, settings.DecimalPlaces));
 
-            // Порядок поиска должен содержать каждый из трех шагов ровно один раз.
-            List<SearchStage> order = settings.SearchOrder;
-            bool orderValid = order != null
-                && order.Count == 3
-                && order.Distinct().Count() == 3
-                && order.Contains(SearchStage.Type)
-                && order.Contains(SearchStage.Instance)
-                && order.Contains(SearchStage.System);
-            if (!orderValid)
-                settings.SearchOrder = PluginSettings.DefaultSearchOrder();
+            // Скрытого системного шага больше нет — вычищаем его из порядка,
+            // сохраняя относительный порядок Экземпляр/Тип (файлы старых версий).
+            List<SearchStage> order = (settings.SearchOrder ?? new List<SearchStage>())
+                .Where(stage => stage == SearchStage.Instance || stage == SearchStage.Type)
+                .ToList();
+            bool orderValid = order.Count == 2 && order[0] != order[1];
+            settings.SearchOrder = orderValid ? order : PluginSettings.DefaultSearchOrder();
 
             MigrateToCurrentVersion(settings);
 
