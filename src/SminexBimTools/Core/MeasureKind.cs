@@ -1,5 +1,4 @@
 using System;
-using Autodesk.Revit.DB;
 
 namespace SminexBimTools.Core
 {
@@ -59,22 +58,5 @@ namespace SminexBimTools.Core
             }
         }
 
-        /// <summary>
-        /// «Родной» системный параметр Revit этой проверки. Используется только
-        /// аналитикой настроек — чтобы распознать в правиле локализованное имя
-        /// системного параметра; при подсчете системные параметры находятся
-        /// по имени, как любые другие.
-        /// </summary>
-        public static BuiltInParameter FallbackBuiltInParameter(this MeasureKind kind)
-        {
-            switch (kind)
-            {
-                case MeasureKind.Volume: return BuiltInParameter.HOST_VOLUME_COMPUTED;
-                case MeasureKind.Area: return BuiltInParameter.HOST_AREA_COMPUTED;
-                case MeasureKind.Length: return BuiltInParameter.CURVE_ELEM_LENGTH;
-                // У «Массы» системного запасного параметра нет.
-                default: return BuiltInParameter.INVALID;
-            }
-        }
     }
 }

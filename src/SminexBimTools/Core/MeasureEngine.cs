@@ -21,10 +21,10 @@ namespace SminexBimTools.Core
 
         /// <summary>
         /// Суммирует значение измерения <paramref name="kind"/> по элементам.
-        /// Источники обходятся в порядке settings.SearchOrder; правила с явным
-        /// источником («экземпляр»/«тип») проверяются только на своем шаге,
-        /// правила «Авто» — на каждом. Используется первый найденный параметр
-        /// со значением.
+        /// Правила проверяются строго сверху вниз (построчно); источник строки
+        /// задает место поиска, «Авто» обходит места в порядке
+        /// settings.SearchOrder (экземпляр/тип/системные). Используется первый
+        /// найденный параметр со значением.
         /// </summary>
         public static SummationResult Sum(Document document, ICollection<ElementId> elementIds, MeasureKind kind, PluginSettings settings)
         {
@@ -69,11 +69,11 @@ namespace SminexBimTools.Core
 
                 string categoryName = element.Category != null ? element.Category.Name : "Без категории";
 
-                ParameterHit hit;
-                if (categoryRules.TryGetValue(categoryName, out List<ParameterRule> overrides))
-                    hit = FindRowMajor(element, overrides, settings.SearchOrder);
-                else
-                    hit = Find(element, generalRules, settings.SearchOrder);
+                List<ParameterRule> activeRules =
+                    categoryRules.TryGetValue(categoryName, out List<ParameterRule> overrides)
+                        ? overrides
+                        : generalRules;
+                ParameterHit hit = FindRowMajor(element, activeRules, settings.SearchOrder);
 
                 double? value = null;
                 string unitLabel = null; // null => значение без размерности
@@ -144,10 +144,13 @@ namespace SminexBimTools.Core
         }
 
         /// <summary>
-        /// Поиск по правилам исключения категории: строго сверху вниз,
-        /// строка за строкой. Источник строки задает, где искать: «Экземпляр» —
-        /// только в экземпляре, «Тип» — только в типе, «Авто» — и там и там
-        /// в последовательности общего порядка поиска.
+        /// Поиск по правилам строго сверху вниз, строка за строкой: Параметр 1
+        /// проверяется по своему источнику, затем Параметр 2 и т.д. Источник
+        /// «Экземпляр» — только имя в экземпляре, «Тип» — только в типе,
+        /// «Авто» — шаги общего порядка поиска по очереди: экземпляр, тип,
+        /// системные. Шаг «Системные» находит встроенные параметры Revit
+        /// по имени строки — включая те, которых нет в коллекции Parameters
+        /// элемента и которые обычному поиску по имени недоступны.
         /// </summary>
         private static ParameterHit FindRowMajor(Element element, IList<ParameterRule> rules, IList<SearchStage> order)
         {
@@ -183,7 +186,7 @@ namespace SminexBimTools.Core
                         break;
                     }
 
-                    default: // Auto — экземпляр и тип в последовательности общего порядка
+                    default: // Auto — места проверяются в последовательности общего порядка
                     {
                         foreach (SearchStage stage in order)
                         {
@@ -198,6 +201,12 @@ namespace SminexBimTools.Core
                                 Parameter parameter = FindByName(typeElement, name);
                                 if (parameter != null)
                                     return MakeHit(parameter, "тип", rule);
+                            }
+                            else if (stage == SearchStage.System)
+                            {
+                                Parameter parameter = BuiltInParameterMap.Find(element, name);
+                                if (parameter != null)
+                                    return MakeHit(parameter, "системный", rule);
                             }
                         }
                         break;
@@ -223,43 +232,6 @@ namespace SminexBimTools.Core
             return null;
         }
 
-        private static ParameterHit Find(Element element, IList<ParameterRule> rules, IList<SearchStage> order)
-        {
-            Element typeElement = null;
-            ElementId typeId = element.GetTypeId();
-            if (typeId != null && typeId != ElementId.InvalidElementId)
-                typeElement = element.Document.GetElement(typeId);
-
-            foreach (SearchStage stage in order)
-            {
-                switch (stage)
-                {
-                    case SearchStage.Instance:
-                    {
-                        Parameter parameter = FindByRules(element, rules, ParameterSource.Instance, out ParameterRule rule);
-                        if (parameter != null)
-                            return MakeHit(parameter, "экземпляр", rule);
-                        break;
-                    }
-
-                    case SearchStage.Type:
-                    {
-                        if (typeElement == null)
-                            break;
-                        Parameter parameter = FindByRules(typeElement, rules, ParameterSource.Type, out ParameterRule rule);
-                        if (parameter != null)
-                            return MakeHit(parameter, "тип", rule);
-                        break;
-                    }
-
-                    // Прочие шаги (например, System из старых файлов настроек)
-                    // пропускаются: системные параметры читаются только по имени.
-                }
-            }
-
-            return null;
-        }
-
         /// <summary>
         /// Встроенные параметры Revit подписываются «системный», чтобы
         /// в результатах было видно происхождение значения.
@@ -276,33 +248,6 @@ namespace SminexBimTools.Core
                 SourceLabel = isBuiltIn ? "системный" : locationLabel,
                 Rule = rule
             };
-        }
-
-        private static Parameter FindByRules(Element target, IList<ParameterRule> rules, ParameterSource stageSource, out ParameterRule matchedRule)
-        {
-            foreach (ParameterRule rule in rules)
-            {
-                if (rule == null)
-                    continue;
-
-                // Правило с явным источником срабатывает только на своем шаге.
-                if (rule.Source != ParameterSource.Auto && rule.Source != stageSource)
-                    continue;
-
-                string name = rule.Name == null ? null : rule.Name.Trim();
-                if (string.IsNullOrEmpty(name))
-                    continue;
-
-                Parameter parameter = FindByName(target, name);
-                if (parameter != null)
-                {
-                    matchedRule = rule;
-                    return parameter;
-                }
-            }
-
-            matchedRule = null;
-            return null;
         }
 
         /// <summary>

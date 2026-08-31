@@ -102,20 +102,9 @@ namespace SminexBimTools.Core
             if (string.IsNullOrEmpty(name))
                 return string.Empty;
 
-            // Совпадение с локализованным именем системного параметра этой проверки.
-            BuiltInParameter builtIn = kind.FallbackBuiltInParameter();
-            if (builtIn != BuiltInParameter.INVALID)
-            {
-                try
-                {
-                    if (string.Equals(LabelUtils.GetLabelFor(builtIn), name, StringComparison.OrdinalIgnoreCase))
-                        return "✓ системный параметр Revit";
-                }
-                catch
-                {
-                    // Нет метки — пропускаем проверку на системный.
-                }
-            }
+            // Совпадение с локализованным именем любого системного параметра Revit.
+            if (BuiltInParameterMap.ContainsName(name))
+                return "✓ системный параметр Revit";
 
             if (!projectParameters.TryGetValue(name, out ProjectParameterInfo info))
                 return "— не найден среди параметров проекта";
