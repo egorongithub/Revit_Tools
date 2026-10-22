@@ -69,13 +69,13 @@ namespace SminexBimTools.Settings
             // Порядок поиска: каждый из трех шагов ровно один раз. Относительный
             // порядок известных шагов из файла сохраняется, отсутствующие
             // дописываются в конец (файлы старых версий могли не содержать
-            // шаг «Системные»).
-            var known = new[] { SearchStage.Instance, SearchStage.Type, SearchStage.System };
+            // шаг «Системные»). Эталонный набор шагов — DefaultSearchOrder.
+            List<SearchStage> defaultOrder = PluginSettings.DefaultSearchOrder();
             List<SearchStage> order = (settings.SearchOrder ?? new List<SearchStage>())
-                .Where(known.Contains)
+                .Where(defaultOrder.Contains)
                 .Distinct()
                 .ToList();
-            foreach (SearchStage stage in PluginSettings.DefaultSearchOrder())
+            foreach (SearchStage stage in defaultOrder)
             {
                 if (!order.Contains(stage))
                     order.Add(stage);
@@ -94,6 +94,9 @@ namespace SminexBimTools.Settings
         /// v2: правила массы и исключения по площади воздуховодов.
         /// v3: исключения по категориям переехали из общих списков
         ///     в отдельные (отдельная таблица в настройках).
+        /// v4: удален скрытый системный шаг (порядок чистится в Sanitize).
+        /// v5: шаг «Системные» возвращен как поиск по имени (отсутствующие
+        ///     шаги порядка дописываются в Sanitize, отдельной миграции нет).
         /// </summary>
         private static void MigrateToCurrentVersion(PluginSettings settings)
         {

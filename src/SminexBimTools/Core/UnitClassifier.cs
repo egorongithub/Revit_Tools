@@ -150,6 +150,24 @@ namespace SminexBimTools.Core
         }
 #endif
 
+        /// <summary>
+        /// Измерение значения конкретного параметра (по типу данных его
+        /// определения). Для нечисловых параметров — None.
+        /// </summary>
+        public static ValueDimension ClassifyParameter(Parameter parameter)
+        {
+            if (parameter == null || parameter.StorageType != StorageType.Double)
+                return ValueDimension.None;
+
+#if REVIT2020 || REVIT2021
+#pragma warning disable CS0618
+            return Classify(parameter.Definition.UnitType);
+#pragma warning restore CS0618
+#else
+            return Classify(parameter.Definition.GetDataType());
+#endif
+        }
+
         /// <summary>Единица результата для измерения («м», «м²», «м³», «кг»).</summary>
         public static string UnitLabel(ValueDimension dimension)
         {

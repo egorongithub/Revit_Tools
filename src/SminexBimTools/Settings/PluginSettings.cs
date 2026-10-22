@@ -27,9 +27,9 @@ namespace SminexBimTools.Settings
         public List<ParameterRule> MassRules { get; set; } = new List<ParameterRule>();
 
         // Исключения по категориям: правила с заполненным Category.
-        // Для элементов «своей» категории действуют только они — без общих
-        // правил и без системного параметра Revit. Проверяются строго
-        // сверху вниз (строка за строкой).
+        // Для элементов «своей» категории действуют только они — общие
+        // правила не применяются. Проверяются строго сверху вниз
+        // (строка за строкой).
 
         /// <summary>Исключения по категориям для «Объема».</summary>
         public List<ParameterRule> VolumeCategoryRules { get; set; } = new List<ParameterRule>();

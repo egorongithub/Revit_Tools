@@ -388,7 +388,7 @@ namespace SminexBimTools.UI
                     continue;
                 rules.Add(new RuleVm(name, ParameterSource.Auto, RawUnit.Auto)
                 {
-                    Status = ModelParameterAnalyzer.Evaluate(name, kind, map)
+                    Status = ModelParameterAnalyzer.Evaluate(name, kind, ParameterSource.Auto, map)
                 });
                 existing.Add(name);
             }
@@ -432,7 +432,7 @@ namespace SminexBimTools.UI
             {
                 MeasureKind kind = _gridKinds[pair.Key];
                 foreach (RuleVm vm in pair.Value)
-                    vm.Status = ModelParameterAnalyzer.Evaluate(vm.Name, kind, map);
+                    vm.Status = ModelParameterAnalyzer.Evaluate(vm.Name, kind, vm.Source, map);
             }
         }
     }

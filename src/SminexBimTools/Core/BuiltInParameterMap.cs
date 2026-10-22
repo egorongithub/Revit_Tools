@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Autodesk.Revit.DB;
 
 namespace SminexBimTools.Core
@@ -13,76 +14,82 @@ namespace SminexBimTools.Core
     /// </summary>
     public static class BuiltInParameterMap
     {
-        private static Dictionary<string, List<BuiltInParameter>> _byLabel;
+        // Карта строится один раз за сессию Revit: перебор нескольких тысяч
+        // значений enum, значительная часть которых бросает исключение
+        // в LabelUtils (нет метки). Это заметная, но однократная задержка
+        // при первом использовании шага «Системные»; Lazy гарантирует
+        // единственную сборку даже при параллельном первом обращении.
+        private static readonly Lazy<Dictionary<string, List<BuiltInParameter>>> ByLabel =
+            new Lazy<Dictionary<string, List<BuiltInParameter>>>(Build, LazyThreadSafetyMode.ExecutionAndPublication);
 
-        private static Dictionary<string, List<BuiltInParameter>> ByLabel
+        private static Dictionary<string, List<BuiltInParameter>> Build()
         {
-            get
+            var map = new Dictionary<string, List<BuiltInParameter>>(StringComparer.OrdinalIgnoreCase);
+            foreach (BuiltInParameter builtIn in Enum.GetValues(typeof(BuiltInParameter)))
             {
-                if (_byLabel == null)
+                if (builtIn == BuiltInParameter.INVALID)
+                    continue;
+
+                string label;
+                try
                 {
-                    // Строится один раз за сессию (несколько тысяч значений enum).
-                    var map = new Dictionary<string, List<BuiltInParameter>>(StringComparer.OrdinalIgnoreCase);
-                    foreach (BuiltInParameter builtIn in Enum.GetValues(typeof(BuiltInParameter)))
-                    {
-                        if (builtIn == BuiltInParameter.INVALID)
-                            continue;
-
-                        string label;
-                        try
-                        {
-                            label = LabelUtils.GetLabelFor(builtIn);
-                        }
-                        catch
-                        {
-                            continue; // у многих значений enum метки нет
-                        }
-
-                        if (string.IsNullOrEmpty(label))
-                            continue;
-
-                        if (!map.TryGetValue(label, out List<BuiltInParameter> list))
-                        {
-                            list = new List<BuiltInParameter>();
-                            map[label] = list;
-                        }
-                        list.Add(builtIn);
-                    }
-
-                    _byLabel = map;
+                    label = LabelUtils.GetLabelFor(builtIn);
+                }
+                catch
+                {
+                    continue; // у многих значений enum метки нет
                 }
 
-                return _byLabel;
+                if (string.IsNullOrEmpty(label))
+                    continue;
+
+                if (!map.TryGetValue(label, out List<BuiltInParameter> list))
+                {
+                    list = new List<BuiltInParameter>();
+                    map[label] = list;
+                }
+                list.Add(builtIn);
             }
+
+            return map;
         }
 
         /// <summary>Существует ли системный параметр Revit с таким именем.</summary>
         public static bool ContainsName(string name)
         {
-            return !string.IsNullOrWhiteSpace(name) && ByLabel.ContainsKey(name.Trim());
+            return !string.IsNullOrWhiteSpace(name) && ByLabel.Value.ContainsKey(name.Trim());
         }
 
         /// <summary>
-        /// Первый системный параметр элемента с данным именем и значением.
-        /// Одно имя может принадлежать нескольким системным параметрам
-        /// (например, «Ширина» у окон и воздуховодов — разные параметры) —
-        /// проверяются все кандидаты.
+        /// Системный параметр элемента с данным именем и значением. Одно имя
+        /// может принадлежать нескольким системным параметрам (например,
+        /// «Ширина» у окон и воздуховодов — разные параметры), поэтому при
+        /// неоднозначности предпочитается кандидат, чье измерение совпадает
+        /// с измерением проверки; если такого нет — первый со значением.
         /// </summary>
-        public static Parameter Find(Element element, string name)
+        public static Parameter Find(Element element, string name, ValueDimension preferredDimension)
         {
-            if (string.IsNullOrWhiteSpace(name))
+            if (element == null || string.IsNullOrWhiteSpace(name))
                 return null;
-            if (!ByLabel.TryGetValue(name.Trim(), out List<BuiltInParameter> candidates))
+            if (!ByLabel.Value.TryGetValue(name.Trim(), out List<BuiltInParameter> candidates))
                 return null;
 
+            Parameter fallback = null;
             foreach (BuiltInParameter builtIn in candidates)
             {
                 Parameter parameter = element.get_Parameter(builtIn);
-                if (parameter != null && parameter.HasValue)
+                if (parameter == null || !parameter.HasValue)
+                    continue;
+
+                if (preferredDimension == ValueDimension.None
+                    || UnitClassifier.ClassifyParameter(parameter) == preferredDimension)
                     return parameter;
+
+                if (fallback == null)
+                    fallback = parameter;
             }
 
-            return null;
+            return fallback;
         }
     }
 }

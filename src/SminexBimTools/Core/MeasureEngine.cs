@@ -16,7 +16,7 @@ namespace SminexBimTools.Core
         {
             public Parameter Parameter;
             public string SourceLabel;  // экземпляр / тип / системный
-            public ParameterRule Rule;  // null для системного шага
+            public ParameterRule Rule;  // правило, которым найден параметр
         }
 
         /// <summary>
@@ -34,6 +34,7 @@ namespace SminexBimTools.Core
                 return CountElements(document, elementIds);
 
             var result = new SummationResult { TotalElements = elementIds.Count };
+            ValueDimension preferredDimension = UnitClassifier.ExpectedDimension(kind);
 
             // Общие правила — без категории (строки с категорией в общем списке
             // игнорируются защитно: после миграции их там быть не должно).
@@ -42,7 +43,9 @@ namespace SminexBimTools.Core
                 .ToList();
 
             // Исключения: для элементов «своей» категории действуют ТОЛЬКО они —
-            // без общих правил и без системного параметра Revit.
+            // общие правила не применяются. Системный параметр может участвовать
+            // лишь когда строка исключения с источником «Авто» совпадает по имени
+            // с системным (шаг «Системные» ищет только имя самой строки).
             var categoryRules = new Dictionary<string, List<ParameterRule>>(StringComparer.OrdinalIgnoreCase);
             foreach (ParameterRule rule in settings.GetCategoryRules(kind))
             {
@@ -73,7 +76,7 @@ namespace SminexBimTools.Core
                     categoryRules.TryGetValue(categoryName, out List<ParameterRule> overrides)
                         ? overrides
                         : generalRules;
-                ParameterHit hit = FindRowMajor(element, activeRules, settings.SearchOrder);
+                ParameterHit hit = FindRowMajor(element, activeRules, settings.SearchOrder, preferredDimension);
 
                 double? value = null;
                 string unitLabel = null; // null => значение без размерности
@@ -81,7 +84,7 @@ namespace SminexBimTools.Core
                     value = ExtractValue(hit.Parameter, out unitLabel);
 
                 // Безразмерное значение с явно заданной единицей — переводим в м/м²/м³.
-                if (value != null && unitLabel == null && hit.Rule != null && hit.Rule.Unit != RawUnit.Auto)
+                if (value != null && unitLabel == null && hit.Rule.Unit != RawUnit.Auto)
                 {
                     value *= RawUnits.Factor(hit.Rule.Unit);
                     unitLabel = "число в " + RawUnits.Label(hit.Rule.Unit);
@@ -150,9 +153,10 @@ namespace SminexBimTools.Core
         /// «Авто» — шаги общего порядка поиска по очереди: экземпляр, тип,
         /// системные. Шаг «Системные» находит встроенные параметры Revit
         /// по имени строки — включая те, которых нет в коллекции Parameters
-        /// элемента и которые обычному поиску по имени недоступны.
+        /// элемента и которые обычному поиску по имени недоступны; при
+        /// неоднозначном имени предпочитается кандидат с измерением проверки.
         /// </summary>
-        private static ParameterHit FindRowMajor(Element element, IList<ParameterRule> rules, IList<SearchStage> order)
+        private static ParameterHit FindRowMajor(Element element, IList<ParameterRule> rules, IList<SearchStage> order, ValueDimension preferredDimension)
         {
             Element typeElement = null;
             ElementId typeId = element.GetTypeId();
@@ -204,7 +208,12 @@ namespace SminexBimTools.Core
                             }
                             else if (stage == SearchStage.System)
                             {
-                                Parameter parameter = BuiltInParameterMap.Find(element, name);
+                                // Системный параметр по имени строки: сначала у
+                                // экземпляра, затем у типа (встроенные параметры
+                                // типа через get_Parameter тоже доступны).
+                                Parameter parameter = BuiltInParameterMap.Find(element, name, preferredDimension);
+                                if (parameter == null && typeElement != null)
+                                    parameter = BuiltInParameterMap.Find(typeElement, name, preferredDimension);
                                 if (parameter != null)
                                     return MakeHit(parameter, "системный", rule);
                             }
@@ -271,13 +280,7 @@ namespace SminexBimTools.Core
                     // так конвертируются не только «Длина»/«Площадь»/«Объем»/«Масса»,
                     // но и специальные виды: «Размер воздуховода», «Размер трубы»,
                     // толщины изоляции и т.п.
-#if REVIT2020 || REVIT2021
-#pragma warning disable CS0618
-                    ValueDimension dimension = UnitClassifier.Classify(parameter.Definition.UnitType);
-#pragma warning restore CS0618
-#else
-                    ValueDimension dimension = UnitClassifier.Classify(parameter.Definition.GetDataType());
-#endif
+                    ValueDimension dimension = UnitClassifier.ClassifyParameter(parameter);
                     if (dimension != ValueDimension.None)
                     {
                         unitLabel = UnitClassifier.UnitLabel(dimension);

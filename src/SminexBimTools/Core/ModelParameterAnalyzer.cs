@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Autodesk.Revit.DB;
+using SminexBimTools.Settings;
 
 namespace SminexBimTools.Core
 {
@@ -95,19 +96,30 @@ namespace SminexBimTools.Core
         /// <summary>
         /// Оценивает имя параметра для проверки <paramref name="kind"/>:
         /// найден ли он в проекте и допустим ли его тип данных.
+        /// Порядок проверок повторяет порядок поиска при подсчете: сначала
+        /// параметры проекта (при умолчальном порядке экземпляр/тип они
+        /// находятся раньше системных), затем системные имена.
         /// </summary>
-        public static string Evaluate(string name, MeasureKind kind, Dictionary<string, ProjectParameterInfo> projectParameters)
+        public static string Evaluate(string name, MeasureKind kind, ParameterSource source, Dictionary<string, ProjectParameterInfo> projectParameters)
         {
             name = name == null ? null : name.Trim();
             if (string.IsNullOrEmpty(name))
                 return string.Empty;
 
-            // Совпадение с локализованным именем любого системного параметра Revit.
-            if (BuiltInParameterMap.ContainsName(name))
-                return "✓ системный параметр Revit";
-
             if (!projectParameters.TryGetValue(name, out ProjectParameterInfo info))
+            {
+                // Совпадение с локализованным именем системного параметра Revit.
+                // Скрытые системные параметры ищутся только на шаге «Системные»,
+                // который выполняется для строк с источником «Авто».
+                if (BuiltInParameterMap.ContainsName(name))
+                {
+                    return source == ParameterSource.Auto
+                        ? "✓ системный параметр Revit"
+                        : "• системное имя — скрытые системные ищутся при источнике «Авто»";
+                }
+
                 return "— не найден среди параметров проекта";
+            }
 
             // Измерение параметра определяется по допустимым единицам его типа
             // данных: «Размер воздуховода», «Толщина изоляции» и т.п. — тоже длины.
