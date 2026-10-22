@@ -63,15 +63,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" out/*.zip \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "Sminex BIM Tools $GITHUB_REF_NAME" \
-            --notes "$(cat <<'NOTES'
-          Готовые сборки Sminex BIM Tools для Autodesk Revit 2020, 2021, 2022 и 2024.
+          notes="Готовые сборки Sminex BIM Tools для Autodesk Revit 2020, 2021, 2022 и 2024.
 
-          **Установка**: распакуйте архив своей версии Revit в
-          `%AppData%\Autodesk\Revit\Addins\<версия>\` (внутри архива уже
-          правильная структура: `SminexBimTools.addin` + папка
-          `SminexBimTools` с DLL) и перезапустите Revit.
-          NOTES
-          )"
+          **Установка**: распакуйте архив своей версии Revit в \`%AppData%\Autodesk\Revit\Addins\<версия>\\\` (внутри архива уже правильная структура: \`SminexBimTools.addin\` + папка \`SminexBimTools\` с DLL) и перезапустите Revit."
+
+          # Если релиз уже создан вручную (через веб-интерфейс GitHub) —
+          # просто прикрепляем к нему собранные архивы.
+          if ! gh release create "$GITHUB_REF_NAME" out/*.zip \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Sminex BIM Tools $GITHUB_REF_NAME" \
+              --notes "$notes"; then
+            gh release upload "$GITHUB_REF_NAME" out/*.zip \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          fi
